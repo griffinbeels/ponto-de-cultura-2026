@@ -244,6 +244,10 @@
     }
     el('circle', { r: 11.5, fill: C.sun, stroke: C.sunDeep, 'stroke-width': 1.2 }, J.sun);
 
+    // the stage names sit above the sun, so one stays readable while the sun passes under it
+    svg.appendChild(J.names);
+    set(J.names, { 'font-family': 'Poppins, sans-serif', 'text-anchor': 'middle' });   // what it inherited from the label group
+
     J.ponto = txt(svg, 0, 12, 'PONTO DE CULTURA', {
       'text-anchor': 'middle', 'font-family': 'Permanent Marker, cursive', 'font-size': 37,
       fill: C.brush, stroke: C.ink, 'stroke-width': 3.4, 'paint-order': 'stroke', 'stroke-linejoin': 'round',   // a firm black outline keeps it legible on the feathers
@@ -380,24 +384,25 @@
     });
 
     // ── the sun ──
-    const loopA = (sec * 40) % 360;
-    // "It represents existence as a continuous cycle" sets the sun circling (to 1.1);
-    // "Follows Path of Sun…" sends it along the arrows (to 7)
-    const oIntro = (opt.introOrbit ? 1 : 0) * bump(t, .95, 1.1, 1.45, 1.85), oArrows = A * bump(t, 6.86, 7, 7.45, 7.78);
-    const journey = ramp(t, 7.8, 8.35);
-    const theta = t >= 7.8 ? thetaAt(t) : loopA;
-    const sunO = t >= 7.8 ? journey : Math.max(oIntro, oArrows);
+    // Main story: the scene's sun driver (storySun) says where it is — circling
+    // from the cover on, then travelling to Kala, then walked through the four
+    // moments by the scroll. Step-by-step: it circles along the arrows for
+    // "Follows Path of Sun…" (to 7).
+    const story = opt.sun != null;
+    const theta = story ? opt.sun.a : (sec * 40) % 360;
+    const sunO = story ? ramp(t, .1, .85) : A * bump(t, 6.86, 7, 7.45, 7.78);
+    const sunAt = ((theta % 360) + 360) % 360;
     const [sx, sy] = P(150, theta);
     J.sun.setAttribute('opacity', f(sunO));
     J.sun.setAttribute('transform', `translate(${f(sx)} ${f(sy)})`);
     J.rays.setAttribute('transform', `rotate(${f(RM ? 0 : sec * 30)})`);
 
-    // the five words of the cycle follow the sun around
-    const wordsOn = oIntro > .35 && t >= 1.18;           // once "of birth, growth, …" is on the page
-    for (const w of opt.words || []) w.classList.toggle('on', wordsOn && angDist(loopA, +w.dataset.a) < 26);
+    // the five words of the cycle light as the sun passes their moment
+    const wordsOn = story && t >= 1.18 && t < 2;          // once "of birth, growth, …" is on the page
+    for (const w of opt.words || []) w.classList.toggle('on', wordsOn && angDist(sunAt, +w.dataset.a) < 26);
 
     // ── the four moments: the sun paints each quarter as it passes ──
-    const thJ = t >= 7.8 ? theta : -24;
+    const thJ = t >= 8.8 ? thetaAt(t) : -24;              // where the four moments have got to
     let darkD = '';
     J.wedges.forEach((w, i) => {
       const a0 = i * 90, fill = clamp((thJ - a0) / 90);
@@ -409,28 +414,35 @@
     const full = ramp(t, 12.35, 12.95);
     J.rings.forEach(r => r.setAttribute('opacity', f(.55 * ramp(t, 8.2, 8.8))));
     J.core.setAttribute('opacity', f(full));
-    J.orbit.setAttribute('opacity', f(ramp(t, 7.75, 8.35)));
+    // "It represents existence as a continuous cycle" draws the sun's path (to 1.1); it stays
+    J.orbit.setAttribute('opacity', f(story ? ramp(t, .95, 1.1) : 0));
     J.disk.setAttribute('opacity', f(ramp(t, 7.6, 8.3)));
     J.fog.setAttribute('opacity', f(1 - ramp(t, 7.6, 8.3)));   // the cream disc takes over once the sky darkens
-    // "Its four stages symbolize this journey:" lights the four moments in order (8.4 → 8.8)
-    const seq = i => ramp(t, 8.4 + i * .09, 8.49 + i * .09);
-    const seqGlow = i => bump(t, 8.4 + i * .09, 8.46 + i * .09, 8.52 + i * .09, 8.62 + i * .09);
-    const moments = ramp(t, 8.8, 9);
+    const moments = ramp(t, 8.9, 9);
+    J.names.setAttribute('opacity', story ? 1 : 0);
     J.circles.forEach((c, i) => {
       const [x, y] = P(cR, c.a);
       const pop = backOut(ramp(intro, i * .05, .2 + i * .05));
       // small circles: moments of the sun
       const small = A * bump(t, 4.45, 4.95, 5.45, 5.9);
       const ph = ((sec * .8) - i * .25) % 1, beat = Math.exp(-((ph < 0 ? ph + 1 : ph) * 7));
-      // the circle nearest the sun glows during the four moments
-      const near = t >= 8.8 ? clamp(1 - angDist(theta, c.a) / 40) : 0;
+      // the circle the sun is standing on glows during the four moments
+      const near = t >= 8.9 ? clamp(1 - angDist(thJ, c.a) / 40) : 0;
       const pole = c.a === 90 ? poleN : c.a === 270 ? poleS : 0;
-      const lit = seqGlow(i);
-      const sc = pop * (cS / 17) * (1 + .35 * small * beat + .22 * near * moments + .25 * pole + .3 * lit);
+      const lit = story ? opt.sun.pulse[i] : 0;           // a one-shot pulse, never held
+      const sc = pop * (cS / 17) * (1 + .35 * small * beat + .22 * near * moments + .25 * pole + .35 * lit);
       c.g.setAttribute('transform', `translate(${f(x)} ${f(y)}) scale(${f(Math.max(sc, .001))})`);
       c.dot.setAttribute('opacity', f(small * beat));
       c.glow.setAttribute('opacity', f(Math.max(near * moments, pole, lit)));
-      J.nameEls[i].setAttribute('opacity', f(t >= 8.8 ? .45 + .55 * near : seq(i)));
+      if (story) {
+        // a label pops up as the sun passes its dot, gone by halfway to the next;
+        // it stays for good once the sun has landed on that stage (Kala at the
+        // KALA box … Musoni at the MUSONI box), so the last step shows all four
+        const d = ((sunAt - c.a) % 360 + 360) % 360;
+        const brief = sunO * ramp(t, .6, .9) * ramp(d, 0, 6) * (1 - ramp(d, 30, 45));
+        const kept = ramp(t, 8.95 + i, 9 + i) * (.55 + .45 * Math.max(near, ramp(t, 12.6, 13)));   // all four full as the cycle closes
+        J.nameEls[i].setAttribute('opacity', f(Math.max(brief, kept)));
+      }
     });
 
     // hand-off to the next section: the diagram and its sky dissolve into the
@@ -438,15 +450,18 @@
     const handoff = ramp(t, 13.05, 13.9);
     J.svg.style.opacity = f(1 - handoff);
 
-    // sky (main story only)
+    // sky (main story only): it follows the sun itself while it travels to Kala
+    // (whatever time of day it passes), then the four moments
     if (!opt.sky) return;
     const skyMix = ramp(t, 7.6, 8.4);
-    const [top, bottom] = skyAt(thJ);
+    const skyA = t < 9 ? sunAt : thJ;
+    const [top, bottom] = skyAt(skyA);
     const toPage = c => mix2(C.page, c, 1 - handoff);
     opt.sky.style.background = skyMix > .001
       ? `linear-gradient(180deg, ${toPage(mix2(C.paper, top, skyMix))}, ${toPage(mix2(C.paper, bottom, skyMix))})`
       : '';
-    const night = thJ < 20 ? 1 - ramp(thJ, -30, 18) : ramp(thJ, 168, 215) * (1 - ramp(thJ, 325, 368));
+    const nb = skyA < 20 ? skyA + 360 : skyA;             // one formula all the way round, so dawn matches at 0° and 360°
+    const night = ramp(nb, 168, 215) * (1 - ramp(nb, 330, 378));
     opt.stars.style.opacity = f(night * skyMix * (1 - handoff));
     themeColor.setAttribute('content', skyMix > .5 && handoff < .5 ? '#1B1412' : handoff >= .5 ? '#F6F2EC' : '#EBA98C');
   }
@@ -733,12 +748,14 @@
   const HANG = .2;          // hang after the last chunk, in viewport heights
   const STORY_PLAN = { start: 0, steps: [
     { cover: true },
-    // The Kongo Cosmogram — the emblem folds into the cosmogram as the box rises;
-    // "It represents existence as a continuous cycle" sets the sun circling;
-    // "of birth, growth, …" lights each word as the sun passes its moment.
+    // The Kongo Cosmogram — the emblem folds into the cosmogram and the sun fades
+    // in, circling, as the box rises; "It represents existence as a continuous
+    // cycle" draws the sun's path; "of birth, growth, …" lights each word as the
+    // sun passes its moment. (The sun itself is driven by storySun.)
     { arrive: .92, chunks: [.92, .92, 1.1, 1.25] },
-    // Its four stages… — as it rises: NSEKE/MPEMBA, then the disc, sky and path;
-    // its one sentence lights the four moments in order, Kala to Musoni.
+    // Its four stages… — as it rises: NSEKE/MPEMBA, then the disc and sky, while
+    // the sun travels on round to Kala; its one sentence pulses the four moments
+    // in order, Kala to Musoni.
     { via: [[.45, 3], [.46, 7.5]], arrive: 8.4, chunks: [8.8] },
     { arrive: 9, chunks: [9, 9] },          // KALA — the sun rises while the box does
     { arrive: 10, chunks: [10, 10] },       // TUKULA — noon
@@ -1072,12 +1089,52 @@
   buildPPF(); Q.svg = $('#ppf-svg');
   buildLabeled(); buildDikenga();
 
+  // The story's sun. It fades in across the cover scroll and circles on its
+  // own through The Kongo Cosmogram. Once that box has been read it stops
+  // circling and travels on round, in the direction it was going, from
+  // wherever it happens to be — landing on Kala exactly as the KALA box is
+  // ready. From there the scroll walks it through the four moments. Scrolling
+  // back runs the travel backwards and hands back to circling from that spot.
+  // A dot pulses once whenever the sun crosses it, and once each, in order,
+  // as "Its four stages symbolize this journey:" appears — never held.
+  const SUN = { a: 20, a0: null, K: 360, last: 0, hit: [-1e9, -1e9, -1e9, -1e9], seqAt: -1e9, seqShown: 0, pulse: [0, 0, 0, 0] };
+  const PULSE_MS = 650, SEQ_GAP = 240;
+  function storySun(s, t, now) {
+    const dt = SUN.last ? Math.min(100, now - SUN.last) : 16;
+    SUN.last = now;
+    const read = s.boxes[1], kala = s.boxes[3], four = s.boxes[2];
+    const y = scrollY, y0 = read.pinEnd, y1 = kala.pinStart;
+    const before = SUN.a;
+    if (y < y0) {                                        // circling, 40° a second
+      SUN.a0 = null;
+      if (!RM) SUN.a += dt * .04;
+    } else {
+      if (SUN.a0 == null) { SUN.a0 = SUN.a; SUN.K = 360 * Math.ceil(SUN.a / 360 - 1e-6); }   // the next Kala ahead
+      const target = y < y1
+        ? lerp(SUN.a0, SUN.K, smooth(clamp((y - y0) / Math.max(1, y1 - y0))))
+        : SUN.K + thetaAt(Math.max(9, t));
+      SUN.a += (target - SUN.a) * (RM ? 1 : 1 - Math.exp(-dt / 140));
+      if (Math.abs(target - SUN.a) < 1e-3) SUN.a = target;
+    }
+    // crossings (with half a degree of grace, so an eased arrival still counts)
+    if (t > .5) for (let i = 0; i < 4; i++) {
+      const c = i * 90;
+      if (Math.floor((SUN.a - c + .5) / 360) !== Math.floor((before - c + .5) / 360)) SUN.hit[i] = now;
+    }
+    if (four.shown > 0 && SUN.seqShown === 0) SUN.seqAt = now;
+    SUN.seqShown = four.shown;
+    const env = x => (x < 0 || x > PULSE_MS) ? 0 : Math.sin(Math.PI * x / PULSE_MS);
+    for (let i = 0; i < 4; i++) SUN.pulse[i] = Math.max(env(now - SUN.hit[i]), env(now - SUN.seqAt - i * SEQ_GAP));
+    return SUN;
+  }
+
   makeScene($('#journey'), STORY_PLAN, 'diagram', (t, now, s) => {
     // the cover emblem shrinks into place while the first box rises
     const first = s.boxes[1];
     storyOpt.layout = first ? clamp(scrollY / Math.max(1, first.pinStart)) : 1;
     // the cover's credit line and scroll cue step aside as the emblem moves up
     coverBits.forEach(n => { n.style.opacity = f(1 - ramp(storyOpt.layout, 0, .3)); });
+    storyOpt.sun = storySun(s, t, now);
     renderCosmogram(story, t, now, storyOpt);
   });
   makeScene($('#ppf'), PPF_PLAN, 'ring', (t, now, s) => renderPPF(t, now, s));
@@ -1146,7 +1203,7 @@
 
   setLang(lang);
   // read-only handle for the headless checks: scroll → timeline and each box's pin window
-  window.__pdc = { scenes, timeline, plans: { journey: STORY_PLAN, ppf: PPF_PLAN, anatomy: BREAKDOWN_PLAN } };
+  window.__pdc = { scenes, timeline, sun: SUN, plans: { journey: STORY_PLAN, ppf: PPF_PLAN, anatomy: BREAKDOWN_PLAN } };
   // start the cover animation once the fonts are in, so the lettering draws in its real shape
   const go = () => { if (!state.start) { state.start = performance.now(); kick(); } };
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(go);
