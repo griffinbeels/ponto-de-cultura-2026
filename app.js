@@ -660,7 +660,7 @@
       beat(i) {
         const T = this.tall[i]; if (!T) return -1;
         const p = (scrollY - T.top) / T.range;
-        if (p < -.05 || p > 1.4) return -1;
+        if (p < -.05) return -1;   // after the pin it stays complete while the card leaves
         return clamp(p, 0, 1) * T.beats * .999;
       },
       render,
@@ -694,11 +694,17 @@
     }
   }
 
+  // Pinned paragraphs: the highlighter sweeps each phrase in step with the
+  // scroll and the bar fills, so every bit of scrolling visibly does something.
   function clauses(scene) {
-    for (const { i, spans } of clauseSteps) {
-      const b = scene.beat(i);
-      const idx = b < 0 ? -1 : Math.floor(b);
-      spans.forEach(s => s.classList.toggle('on', +s.dataset.c === idx));
+    for (const { i, spans, bar } of clauseSteps) {
+      const b = scene.beat(i), beats = scene.tall[i] ? scene.tall[i].beats : 4;
+      for (const s of spans) {
+        const c = +s.dataset.c, fill = b < 0 ? 0 : clamp((b - c) / .8);
+        s.style.backgroundSize = f(fill * 100) + '% 100%';
+        s.classList.toggle('done', b >= c + 1);
+      }
+      if (bar) bar.style.transform = `scaleX(${f(b < 0 ? 0 : clamp(b / (beats - .2)))})`;
     }
   }
 
@@ -773,7 +779,7 @@
     measure(); kick();
     if (open) anatomy.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' });
   });
-  clauseSteps = [1, 2].map(i => ({ i, spans: $$('.c', ppf.steps[i]) }));
+  clauseSteps = [1, 2].map(i => ({ i, spans: $$('.c', ppf.steps[i]), bar: $('.pin-bar i', ppf.steps[i]) }));
 
   typedEl = $('#typed');
   (function wrapWords(node) {

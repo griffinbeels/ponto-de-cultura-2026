@@ -111,7 +111,7 @@ html[data-lang="pt"] [data-l="en"] { display: none !important; }
 }
 .step-cover { min-height: 100vh; min-height: 100svh; padding: 0; }
 .step-spacer { min-height: 100vh; min-height: 100svh; padding: 0; }
-.step.tall { min-height: calc(100svh + var(--beats, 4) * 42svh); }
+.step.tall { min-height: calc(100svh + var(--beats, 4) * 32svh); }
 .step.tall > .card { position: sticky; top: var(--read); }
 .step-end { min-height: 70svh; display: grid; place-items: start center; }
 
@@ -154,14 +154,32 @@ h2.brush {
 /* the five words of the cycle light up as the sun passes their moment */
 .w, .c {
   border-radius: 4px;
-  background-image: linear-gradient(transparent 58%, rgba(255,183,0,.62) 58%, rgba(255,183,0,.62) 92%, transparent 92%);
+  background-image: linear-gradient(transparent 58%, var(--hl) 58%, var(--hl) 92%, transparent 92%);
   background-repeat: no-repeat;
   background-size: 0% 100%;
+  --hl: rgba(255,183,0,.62);
+}
+.w {
   transition: background-size .55s cubic-bezier(.3,.7,.2,1);
   -webkit-box-decoration-break: clone; box-decoration-break: clone;
 }
-.w.on, .c.on { background-size: 100% 100%; }
-.w.on { font-weight: 600; }
+.w.on { background-size: 100% 100%; font-weight: 600; }
+/* In the pinned paragraphs the highlighter follows your thumb: it sweeps across
+   each phrase in step with the scroll (one strip across line breaks), and the
+   phrases already read keep a softer mark — visible proof the scroll is working. */
+.c { -webkit-box-decoration-break: slice; box-decoration-break: slice; }
+.c.done { --hl: rgba(255,183,0,.32); }
+
+/* progress + "keep scrolling" under a pinned paragraph */
+.pin-foot { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.pin-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(27,20,18,.12); overflow: hidden; }
+.pin-bar i { display: block; height: 100%; background: var(--sun); transform-origin: left center; transform: scaleX(0); }
+.pin-cue {
+  display: flex; align-items: center; gap: 5px; white-space: nowrap;
+  font: 600 11.5px/1 var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft);
+}
+.pin-cue svg { width: 16px; height: 16px; fill: none; stroke: var(--brush); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; animation: nudge 1.3s ease-in-out infinite; }
+@keyframes nudge { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(3px); } }
 
 .stage-card h3 {
   margin: 0 0 .5em;
@@ -263,7 +281,7 @@ h2.brush {
   grid-column: 1 / -1; align-self: stretch;
   width: 100vw; margin-left: calc(50% - 50vw);
 }
-.step-close { min-height: 60vh; min-height: 60svh; padding: 0; }
+.step-close { min-height: 40vh; min-height: 40svh; padding: 0; }
 .fig > svg { width: 100%; height: auto; display: block; overflow: visible; }
 .fig-pendant { position: relative; transform-origin: 50% 4%; animation: swing 5.5s ease-in-out infinite alternate; }
 .fig-pendant img { filter: drop-shadow(0 10px 14px rgba(40,14,6,.35)); }
