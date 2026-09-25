@@ -80,22 +80,13 @@
     }
     if (desk) { const S = Math.min(vh * .9, vw * .5); return { S, cx: vw * .68, cy: vh * .5, read: vh * .36 }; }
     // the Past·Present·Future ring is simpler, so it can be smaller and leave room for longer paragraphs
-    const top = 58, S = mode === 'ring' ? Math.min(vw * .86, vh * .4) : Math.min(vw * .98, vh * .5);
+    const top = 64, S = mode === 'ring' ? Math.min(vw * .86, vh * .4) : Math.min(vw * .98, vh * .5);
     return { S, cx: vw / 2, cy: top + S / 2 - 6, read: top + S + 2 };
   }
   function place(svg, L) {
     const s = svg.style;
     s.width = s.height = f(L.S) + 'px';
     s.transform = `translate(${f(L.cx - L.S / 2)}px, ${f(L.cy - L.S / 2)}px)`;
-  }
-  // scroll → continuous step index. Step i is fully reached when its top meets
-  // the top of the viewport (its card then sits on the reading line).
-  function stepT(anchors, y) {
-    if (y < anchors[0]) return (y - anchors[0]) / state.vh;
-    for (let i = 0; i < anchors.length - 1; i++) {
-      if (y < anchors[i + 1]) return i + (y - anchors[i]) / (anchors[i + 1] - anchors[i]);
-    }
-    return anchors.length - 1;
   }
 
   /* ═════════════════ THE JOURNEY: cover → cosmogram → four moments ═════════════════ */
@@ -255,21 +246,6 @@
     }
   }
 
-  // Each section scrolls through its own steps; this maps a section's step
-  // position onto the one timeline the cosmogram knows (see renderCosmogram).
-  function remap(keys, t) {
-    if (t <= keys[0][0]) return keys[0][1];
-    for (let i = 0; i < keys.length - 1; i++) {
-      const [t0, a0] = keys[i], [t1, a1] = keys[i + 1];
-      if (t <= t1) return lerp(a0, a1, (t - t0) / (t1 - t0));
-    }
-    return keys[keys.length - 1][1];
-  }
-  // Main story: cover → The Kongo Cosmogram → straight on to the four stages.
-  // The labelled-diagram steps (2–7) are skipped here and live in the breakdown.
-  const STORY_KEYS = [[0, 0], [1, 1], [1.3, 1.9], [1.45, 2.5], [1.6, 3], [1.62, 7.5], [2, 8], [3, 9], [4, 10], [5, 11], [6, 12], [7, 13]];
-  // Step-by-step breakdown: one back-page label per step, water through arrows.
-  const BREAKDOWN_KEYS = [[-1, 1.5], [0, 2], [1, 3], [2, 4], [3, 5], [4, 6], [5, 7], [6, 7.5]];
 
   // the sky follows the sun: [angle, top colour, bottom colour]
   const SKY = [
@@ -285,14 +261,14 @@
     }
     return [SKY[SKY.length - 1][1], SKY[SKY.length - 1][2]];
   }
-  // Scroll position → where the sun is during the four moments.
-  // Each moment holds while you read it, then the sun travels to the next.
-  const SUN_KEYS = [[8, -24], [9, 0], [10, 90], [11, 180], [12, 270], [13, 360]];
+  // Timeline position → where the sun is during the four moments. It travels
+  // while each moment's words unfold (the holds live in the scroll plan).
+  const SUN_KEYS = [[8.4, -24], [9, 0], [10, 90], [11, 180], [12, 270], [13, 360]];
   function thetaAt(t) {
     if (t <= SUN_KEYS[0][0]) return SUN_KEYS[0][1];
     for (let i = 0; i < SUN_KEYS.length - 1; i++) {
       const [t0, a0] = SUN_KEYS[i], [t1, a1] = SUN_KEYS[i + 1];
-      if (t < t1) return lerp(a0, a1, smooth(clamp(((t - t0) / (t1 - t0) - .16) / .74)));
+      if (t < t1) return lerp(a0, a1, smooth(clamp((t - t0) / (t1 - t0))));
     }
     return 360;
   }
@@ -309,7 +285,7 @@
 
     // stage placement: big and centred on the cover, then up top for the story
     const cov = layout('cover'), dia = layout('diagram');
-    const k = ramp(t, .05, .9);
+    const k = opt.layout != null ? opt.layout : ramp(t, .05, .9);
     place(J.svg, { S: lerp(cov.S, dia.S, k), cx: lerp(cov.cx, dia.cx, k), cy: lerp(cov.cy, dia.cy, k) });
 
     // ── emblem → cosmogram ──
@@ -491,11 +467,13 @@
   function renderPPF(t, now, scene) {
     const sec = now / 1000;
     place(Q.svg, layout('ring'));
-    // draw-in as the section arrives
-    Q.base.setAttribute('opacity', f(.35 * ramp(t, -.8, -.3)));
-    Q.past.setAttribute('stroke-dashoffset', f(1 - ramp(t, -.7, -.15)));
-    Q.future.setAttribute('opacity', f(ramp(t, -.4, 0)));
-    Q.sun.setAttribute('opacity', f(ramp(t, -.5, -.1)));
+    // t: -1 → -.35 while the title box rises (the ring draws itself),
+    // -.35 → .2 while "Ancestry · Transformation · Continuity" unfolds (one label per word),
+    // 1–2 first paragraph, 2–3 second paragraph, 3 closing logo.
+    Q.base.setAttribute('opacity', f(.35 * ramp(t, -1, -.75)));
+    Q.past.setAttribute('stroke-dashoffset', f(1 - ramp(t, -.95, -.55)));
+    Q.future.setAttribute('opacity', f(ramp(t, -.7, -.45)));
+    Q.sun.setAttribute('opacity', f(ramp(t, -.8, -.5)));
 
     // beats inside the two paragraphs
     // Beats follow the words (see index.html data-b):
@@ -513,17 +491,18 @@
       fPres = lerp(dim(focus(b1, 3)), 1, lead);
       fFut = lerp(dim(Math.max(focus(b1, 4), fDir * .6)), 1, lead);
     }
-    Q.lPast.setAttribute('opacity', f(ramp(t, -.35, -.05) * fPast));
-    Q.lPresent.setAttribute('opacity', f(ramp(t, -.25, .05) * fPres));
-    Q.lFuture.setAttribute('opacity', f(ramp(t, -.15, .15) * fFut));
+    // each label lands with its word: Ancestry, Transformation, Continuity
+    Q.lPast.setAttribute('opacity', f(ramp(t, -.3, -.243) * fPast));
+    Q.lPresent.setAttribute('opacity', f(ramp(t, -.09, -.03) * fPres));
+    Q.lFuture.setAttribute('opacity', f(ramp(t, .125, .184) * fFut));
     Q.past.setAttribute('stroke-width', f(6 + (inP1 ? 3 * focus(b1, 2) : 0)));
     Q.future.setAttribute('stroke-width', f(5 + (inP1 ? 3 * focus(b1, 4) : 0)));
-    Q.heads.setAttribute('opacity', f(ramp(t, -.3, .05) * (.7 + .3 * fDir)));
+    Q.heads.setAttribute('opacity', f(ramp(t, -.6, -.35) * (.7 + .3 * fDir)));
 
     // Capoeira: generations on the ring, a legacy passed along it
     const dotsIn = t >= 3 ? 1 : inP2 ? ramp(b2, 0, .7) : 0;
     const flowPast = t >= 3 ? 1 : inP2 ? ramp(b2, .95, 1.35) : 0;
-    const change = t >= 3 ? .5 : inP2 ? bump(b2, 1.9, 2.2, 2.85, 3.2) : 0;
+    const change = t >= 3 ? 0 : inP2 ? bump(b2, 1.9, 2.2, 2.85, 3.2) : 0;
     const flowFut = t >= 3 ? 1 : inP2 ? ramp(b2, 2.95, 3.3) : 0;
     const fillProg = t >= 3 ? 1 : inP2 ? clamp((b2 - 3) / .9) : 0;
     Q.dots.forEach((d, i) => {
@@ -675,70 +654,161 @@
   }
 
   /* ═════════════════ scenes, scroll loop, language ═════════════════ */
-  function makeScene(section, render, mode) {
+  // A scene is a sticky diagram with boxes of text scrolling over it. Every box
+  // lives through the same three phases:
+  //   1. it rises into place — heading visible, the diagram holds still;
+  //   2. it pins, and its words unfold while its animation plays — both driven
+  //      by the same stretch of scroll, so the words on screen always describe
+  //      what the diagram is doing;
+  //   3. it hangs a moment, complete, with "keep scrolling" glowing — then
+  //      leaves as the next box rises.
+  // Each plan entry says where on the diagram's timeline a box's animation
+  // runs: `arrive` while it rises, `from → to` while it unfolds. A step with
+  // `span` has no box and plays its stretch across its own scroll.
+  const HANG = .2;          // hang after the last word, in viewport heights
+  const STORY_PLAN = { start: 0, steps: [
+    { cover: true },
+    { arrive: 0, from: 0, to: 1.3 },        // The Kongo Cosmogram — the emblem folds into the cosmogram, the sun circles
+    { arrive: 3, from: 7.5, to: 8.4 },      // Its four stages… — NSEKE/MPEMBA as it rises; disc, sky and names as it unfolds
+    { arrive: 8.4, from: 8.4, to: 9 },      // KALA — the sun rises
+    { arrive: 9, from: 9, to: 10 },         // TUKULA — the sun climbs to noon
+    { arrive: 10, from: 10, to: 11 },       // LUVEMBA — the sun sets
+    { arrive: 11, from: 11, to: 12 },       // MUSONI — midnight, in the world of the ancestors
+    { span: [12, 13] },                     // the cycle closes back at Kala
+  ] };
+  const PPF_PLAN = { start: -1, steps: [
+    { arrive: -.35, from: -.35, to: .2 },   // title — the ring draws as it rises; one label per subtitle word
+    { arrive: 1, from: 1, to: 1.99 },       // first paragraph (its phrases drive the ring, see renderPPF)
+    { arrive: 2, from: 2, to: 2.99 },       // second paragraph
+    { span: [3, 3] },                       // closing mark
+  ] };
+  const BREAKDOWN_PLAN = { start: 1.4, steps: [
+    { arrive: 1.45, from: 1.45, to: 2 },    // Circle represents Water
+    { arrive: 2.45, from: 2.45, to: 3 },    // Above / Below the Line
+    { arrive: 3.45, from: 3.45, to: 4 },    // Passage through Water
+    { arrive: 4.45, from: 4.45, to: 5 },    // Small Circles
+    { arrive: 5.45, from: 5.45, to: 6 },    // the Poles
+    { arrive: 6.45, from: 6.45, to: 7 },    // Arrows
+    { span: [7, 7.5] },
+  ] };
+
+  function makeScene(section, plan, mode, render) {
     const steps = $$('.step', section);
-    const sc = {
-      section, steps, anchors: [], visible: false, tall: {},
-      cards: $$('.card', section),
-      measure() {
-        this.read = Math.round(layout(mode).read);
-        section.style.setProperty('--read', this.read + 'px');
-        this.anchors = steps.map(docTop);
-        steps.forEach((s, i) => {
-          if (!s.classList.contains('tall')) return;
-          // a pinned paragraph must fit whole on screen, even on short phones
-          const card = $('.card', s), h = card.offsetHeight;
-          const top = Math.max(50, Math.min(this.read, state.vh - h - 12));
-          card.style.top = top + 'px';
-          this.tall[i] = { top: this.anchors[i], range: Math.max(1, s.offsetHeight - top - h), beats: +s.dataset.beats || 4 };
-        });
-      },
-      // continuous beat position inside a tall step (0..beats), -1 outside it
-      // Continuous beat position in a pinned paragraph, -1 before it arrives.
-      // Beat 0 plays while the card rises into place; beats 1… play while it
-      // is pinned; afterwards it stays complete while the card leaves.
-      beat(i) {
-        const T = this.tall[i]; if (!T) return -1;
-        const rise = state.vh * .45, y = scrollY;
-        if (y < T.top - rise) return -1;
-        if (y < T.top) return (y - (T.top - rise)) / rise;
-        return 1 + clamp((y - T.top) / T.range) * (T.beats - 1) * .999;
-      },
-      render,
-    };
+    const sc = { section, steps, plan, mode, render, visible: false, keys: [[0, plan.start]], read: 0 };
+    sc.boxes = steps.map(step => { const card = $(':scope > .card', step); return card ? makeBox(card, step) : null; });
+    sc.cards = sc.boxes.filter(Boolean).map(b => b.el);
+    sc.beat = i => (sc.boxes[i] && sc.boxes[i].B != null ? sc.boxes[i].B : -1);
     scenes.push(sc);
     return sc;
   }
 
-  let typedParas = [], clauseSteps = [];
-  function measure() {
-    state.vw = innerWidth; state.vh = innerHeight;
-    for (const s of scenes) s.measure();
+  const FOOT = '<span class="pin-bar"><i></i></span><span class="pin-cue"><span data-l="en">Keep scrolling</span>' +
+    '<span data-l="pt">Continue rolando</span><svg viewBox="0 0 20 20"><path d="M5 5l5 5 5-5M5 11l5 5 5-5"/></svg></span>';
+  function makeBox(card, step) {
+    const box = { el: card, step, beats: +step.dataset.beats || 0, words: [], phrases: [], U: 1, s: 0, pinStart: 0, pinEnd: 0 };
+    if (box.beats) {
+      for (const p of $$('.unfold', card)) { const r = prepareUnfold(p); box.words.push(...r.words); box.phrases.push(...r.phrases); }
+    } else {
+      for (const p of $$('p', card)) wrapReveal(p, box.words);
+      // each language's words unfold evenly across the box's unfold stretch
+      const byLang = {};
+      for (const w of box.words) { const l = w.el.closest('[data-l]'); (byLang[l ? l.dataset.l : 'all'] = byLang[l ? l.dataset.l : 'all'] || []).push(w); }
+      for (const k in byLang) byLang[k].forEach((w, j, all) => { w.th = (j + 1) / all.length * .97; });
+      box.byLang = byLang;
+    }
+    const foot = document.createElement('div');
+    foot.className = 'pin-foot'; foot.setAttribute('aria-hidden', 'true'); foot.innerHTML = FOOT;
+    card.appendChild(foot);
+    box.bar = $('.pin-bar i', foot);
+    return box;
   }
-
-  // Cards fade as they rise over the diagram (phones), so the picture stays
-  // visible. A card taller than the space under the diagram stays solid until
-  // its last line has come into view.
-  function fadeCards() {
-    const { vh } = state, phone = state.vw < 860;
-    for (const sc of scenes) {
-      if (!sc.visible) continue;
-      for (const c of sc.cards) {
-        const r = c.getBoundingClientRect();
-        if (r.bottom < -40 || r.top > vh + 40) continue;
-        const fin = clamp((vh - r.top) / (vh * .22));
-        const overflow = Math.max(0, r.height - (vh - sc.read) + 16);
-        const fout = phone ? clamp((r.top + overflow - (sc.read - vh * .28)) / (vh * .28 - 24))
-                           : clamp((r.bottom - vh * .04) / (vh * .2));
-        c.style.opacity = f(smooth(Math.min(fin, fout)));
-      }
+  function wrapReveal(node, list) {
+    for (const child of [...node.childNodes]) {
+      if (child.nodeType === 3) {
+        if (!child.textContent.trim()) continue;
+        const frag = document.createDocumentFragment();
+        child.textContent.split(/(\s+)/).forEach(part => {
+          if (!part) return;
+          if (/^\s+$/.test(part)) { frag.append(part); return; }
+          const s = document.createElement('span'); s.className = 'rw'; s.textContent = part; frag.append(s);
+          list.push({ el: s, on: false, th: 1 });
+        });
+        child.replaceWith(frag);
+      } else if (child.nodeType === 1) wrapReveal(child, list);
     }
   }
 
-  // Pinned paragraphs unfold with the diagram. Every word belongs to the beat
-  // of its phrase (data-b in the markup) and appears when the scroll reaches its
-  // place inside that beat; only the current beat's phrase is highlighted;
-  // scrolling back hides the words again and the diagram reverses with them.
+  function measureScene(sc) {
+    const { vh } = state;
+    const read = sc.read = Math.round(layout(sc.mode).read);
+    sc.section.style.setProperty('--read', read + 'px');
+    // 1. size each box's step: room to rise, the box itself, unfold room, hang
+    for (const b of sc.boxes) {
+      if (!b) continue;
+      const h = b.el.offsetHeight;
+      const n = b.beats ? 0 : (b.byLang[state.lang] || b.byLang.all || []).length;
+      b.U = Math.max(1, b.beats ? (b.beats - 1) * .3 * vh : clamp(n * 13, .25 * vh, .6 * vh));
+      b.s = Math.max(50, Math.min(read, vh - h - 12));     // pinned position — higher for a tall box so it fits
+      b.el.style.top = b.s + 'px';
+      b.step.style.height = Math.round(read + h + b.U + HANG * vh) + 'px';
+    }
+    // 2. where each box pins and lets go
+    const tops = sc.steps.map(docTop);
+    sc.boxes.forEach((b, i) => { if (b) { b.pinStart = tops[i] + read - b.s; b.pinEnd = b.pinStart + b.U + HANG * vh; } });
+    // 3. scroll position → the diagram's timeline
+    const keys = [[docTop(sc.section) - vh, sc.plan.start]];
+    const last = () => keys[keys.length - 1][1];
+    sc.plan.steps.forEach((p, i) => {
+      const b = sc.boxes[i], top = tops[i];
+      if (p.span) keys.push([top, p.span[0]], [top + Math.max(1, sc.steps[i].offsetHeight - vh), p.span[1]]);
+      else if (!b) keys.push([top, last()]);
+      else keys.push([b.pinStart, p.arrive], [b.pinStart + .5, p.from], [b.pinStart + b.U, p.to], [b.pinEnd, p.to]);
+    });
+    sc.keys = keys;
+  }
+  function timeline(keys, y) {
+    if (y <= keys[0][0]) return keys[0][1];
+    for (let i = 0; i < keys.length - 1; i++) {
+      const [y0, a0] = keys[i], [y1, a1] = keys[i + 1];
+      if (y <= y1) return y1 > y0 ? lerp(a0, a1, (y - y0) / (y1 - y0)) : a1;
+    }
+    return keys[keys.length - 1][1];
+  }
+
+  // Unfold each box's words for the current scroll position, fill its bar,
+  // and mark it complete (the cue glows) once the last word is out.
+  function updateBoxes(sc) {
+    const y = scrollY, vh = state.vh;
+    for (const b of sc.boxes) {
+      if (!b) continue;
+      let prog;
+      if (b.beats) {
+        // phrase-by-phrase: beat 0 while the box rises, the rest while pinned
+        const rise = vh * .45;
+        const B = b.B = y < b.pinStart - rise ? -1 : y < b.pinStart ? (y - (b.pinStart - rise)) / rise
+          : 1 + clamp((y - b.pinStart) / b.U) * (b.beats - 1) * .999;
+        const cur = B < 0 ? -1 : Math.floor(B);
+        for (const w of b.words) { const on = B >= w.th; if (w.on !== on) { w.on = on; w.el.classList.toggle('on', on); } }
+        for (const ph of b.phrases) {
+          let shown = 0;
+          for (const w of ph.words) if (w.on) shown += w.len + 1;
+          ph.el.style.backgroundSize = f(Math.min(100, shown / ph.total * 100)) + '% 100%';
+          ph.el.classList.toggle('cur', ph.b === cur);
+        }
+        prog = B < 0 ? 0 : clamp(B / (b.beats - .02));
+      } else {
+        const u = clamp((y - b.pinStart) / b.U);
+        for (const w of b.words) { const on = u >= w.th; if (w.on !== on) { w.on = on; w.el.classList.toggle('on', on); } }
+        prog = u;
+      }
+      b.bar.style.transform = `scaleX(${f(prog)})`;
+      b.el.classList.toggle('complete', y >= b.pinStart + b.U - 1);
+    }
+  }
+
+  // Pinned paragraphs of Past · Present · Future unfold phrase by phrase. Every
+  // word belongs to the beat of its phrase (data-b in the markup); only the
+  // current beat's phrase is highlighted; scrolling back hides words again.
   function prepareUnfold(p) {
     const words = [], phrases = [];
     for (const seg of $$('[data-b]', p)) {
@@ -765,23 +835,54 @@
     for (const b in byBeat) byBeat[b].forEach((w, j, all) => { w.th = +b + (j + 1) / all.length * .72; });
     return { words, phrases };
   }
-  function unfold(scene) {
-    for (const { i, paras, bar } of clauseSteps) {
-      const B = scene.beat(i), beats = scene.tall[i] ? scene.tall[i].beats : 4;
-      const cur = B < 0 ? -1 : Math.floor(B);
-      for (const { words, phrases } of paras) {
-        for (const w of words) {
-          const on = B >= w.th;
-          if (w.on !== on) { w.on = on; w.el.classList.toggle('on', on); }
-        }
-        for (const ph of phrases) {
-          let shown = 0;
-          for (const w of ph.words) if (w.on) shown += w.len + 1;
-          ph.el.style.backgroundSize = f(Math.min(100, shown / ph.total * 100)) + '% 100%';
-          ph.el.classList.toggle('cur', ph.b === cur);
-        }
+
+  // Whole-site progress: one segment per box / section, the current one filling.
+  const prog = { el: $('#progress'), segs: [], starts: [], end: 1 };
+  function measureProgress() {
+    const vh = state.vh, starts = [0];
+    for (const sc of scenes) for (const b of sc.boxes) if (b && b.el.offsetHeight) starts.push(b.pinStart - (vh - b.s) * .5);
+    starts.push(docTop($('.back-title')) - vh * .7);
+    const t = typedParas.find(x => x.el.offsetHeight);
+    if (t) starts.push(docTop(t.el) - vh * .8);
+    starts.sort((a, b) => a - b);
+    prog.starts = starts;
+    prog.end = document.documentElement.scrollHeight - vh;
+    if (prog.segs.length !== starts.length) {
+      prog.el.innerHTML = starts.map(() => '<span><i></i></span>').join('');
+      prog.segs = $$('i', prog.el);
+    }
+  }
+  function drawProgress() {
+    const y = scrollY, s = prog.starts;
+    prog.segs.forEach((seg, i) => {
+      const a = s[i], b = i + 1 < s.length ? s[i + 1] : prog.end;
+      seg.style.transform = `scaleX(${f(clamp((y - a) / Math.max(1, b - a)))})`;
+    });
+  }
+
+  let typedParas = [];
+  function measure() {
+    state.vw = innerWidth; state.vh = innerHeight;
+    for (const s of scenes) measureScene(s);
+    measureProgress();
+  }
+
+  // Cards fade as they rise over the diagram (phones), so the picture stays
+  // visible. A card taller than the space under the diagram stays solid until
+  // its last line has come into view.
+  function fadeCards() {
+    const { vh } = state, phone = state.vw < 860;
+    for (const sc of scenes) {
+      if (!sc.visible) continue;
+      for (const c of sc.cards) {
+        const r = c.getBoundingClientRect();
+        if (r.bottom < -40 || r.top > vh + 40) continue;
+        const fin = clamp((vh - r.top) / (vh * .22));
+        const overflow = Math.max(0, r.height - (vh - sc.read) + 16);
+        const fout = phone ? clamp((r.top + overflow - (sc.read - vh * .28)) / (vh * .28 - 24))
+                           : clamp((r.bottom - vh * .04) / (vh * .2));
+        c.style.opacity = f(smooth(Math.min(fin, fout)));
       }
-      if (bar) bar.style.transform = `scaleX(${f(B < 0 ? 0 : clamp(B / (beats - .3)))})`;
     }
   }
 
@@ -815,12 +916,12 @@
   let raf = 0, backVisible = false;
   function frame(now) {
     raf = 0;
-    for (const s of scenes) if (s.visible) s.render(stepT(s.anchors, scrollY), now, s);
-    if (ppf.visible) unfold(ppf);
+    for (const s of scenes) if (s.visible) { updateBoxes(s); s.render(timeline(s.keys, scrollY), now, s); }
     if (backVisible) renderBack(now);
     fadeCards();
     typed();
     dial();
+    drawProgress();
     if (scenes.some(s => s.visible) || backVisible) raf = requestAnimationFrame(frame);
   }
   const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
@@ -839,15 +940,23 @@
   // ── boot ──
   const story = buildCosmogram($('#cosmo'), 'j');
   const storyOpt = { labelled: false, introOrbit: true, words: $$('#journey .w'), sky: $('#journey .sky'), stars: $('#stars') };
+  const coverBits = $$('.step-cover');   // holds the credit line and the scroll cue (their own fade-in animates opacity)
   buildStars($('#stars'));
   const breakdown = buildCosmogram($('#cosmo-steps'), 'k');
   const breakdownOpt = { labelled: true, introOrbit: false, intro: 1 };
   buildPPF(); Q.svg = $('#ppf-svg');
   buildLabeled(); buildDikenga();
 
-  makeScene($('#journey'), (t, now) => renderCosmogram(story, remap(STORY_KEYS, t), now, storyOpt), 'diagram');
-  const ppf = makeScene($('#ppf'), (t, now, s) => renderPPF(t, now, s), 'ring');
-  makeScene($('#anatomy'), (t, now) => renderCosmogram(breakdown, remap(BREAKDOWN_KEYS, t), now, breakdownOpt), 'diagram');
+  makeScene($('#journey'), STORY_PLAN, 'diagram', (t, now, s) => {
+    // the cover emblem shrinks into place while the first box rises
+    const first = s.boxes[1];
+    storyOpt.layout = first ? clamp(scrollY / Math.max(1, first.pinStart)) : 1;
+    // the cover's credit line and scroll cue step aside as the emblem moves up
+    coverBits.forEach(n => { n.style.opacity = f(1 - ramp(storyOpt.layout, 0, .3)); });
+    renderCosmogram(story, t, now, storyOpt);
+  });
+  makeScene($('#ppf'), PPF_PLAN, 'ring', (t, now, s) => renderPPF(t, now, s));
+  makeScene($('#anatomy'), BREAKDOWN_PLAN, 'diagram', (t, now) => renderCosmogram(breakdown, t, now, breakdownOpt));
 
   // the step-by-step breakdown opens under the labelled diagram on the back page
   const deepBtn = $('#deep-btn'), anatomy = $('#anatomy');
@@ -858,7 +967,6 @@
     measure(); kick();
     if (open) anatomy.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' });
   });
-  clauseSteps = [1, 2].map(i => ({ i, paras: $$('.unfold', ppf.steps[i]).map(prepareUnfold), bar: $('.pin-bar i', ppf.steps[i]) }));
 
   function wrapWords(node) {
     for (const child of [...node.childNodes]) {
@@ -905,9 +1013,15 @@
 
   addEventListener('scroll', kick, { passive: true });
   addEventListener('resize', () => { measure(); kick(); });
-  new ResizeObserver(() => { measure(); kick(); }).observe(document.body);
+  // Re-measure whenever a box changes size (web fonts arriving, language
+  // switch, rotation) — each box's pin window depends on its height.
+  const resized = new ResizeObserver(() => { measure(); kick(); });
+  resized.observe(document.body);
+  for (const sc of scenes) for (const c of sc.cards) resized.observe(c);
 
   setLang(lang);
+  // read-only handle for the headless checks: scroll → timeline and each box's pin window
+  window.__pdc = { scenes, timeline };
   // start the cover animation once the fonts are in, so the lettering draws in its real shape
   const go = () => { if (!state.start) { state.start = performance.now(); kick(); } };
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(go);
