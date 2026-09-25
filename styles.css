@@ -199,6 +199,12 @@ h2.brush {
 .rw { opacity: 0; transition: opacity .28s ease; transition-delay: calc(var(--j, 0) * 32ms); }
 .rw.on { opacity: 1; }
 .rw:not(.on) { transition-delay: 0s; }       /* scrolling back: gone at once */
+html.jumping .rw { transition: none; }       /* a tap-jump shows boxes in full at once */
+
+/* stage dots in the main story can be tapped (see spinTo / jumpToStage in app.js) */
+.hit { pointer-events: none; }
+.taps .hit { pointer-events: all; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: fill .2s ease; }
+.taps .hit:hover { fill: rgba(255, 183, 0, .16); }
 
 /* progress + "keep scrolling" under a pinned paragraph */
 .pin-foot { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
@@ -246,6 +252,8 @@ h2.brush {
 
 .ppf-title { text-align: center; }
 .ppf-title h2.brush { transform-origin: center; font-size: clamp(27px, 7.6vw, 50px); }
+/* phones: THE KONGO COSMOGRAM on one line keeps that box short */
+@media (max-width: 859px) { #journey h2.brush { font-size: clamp(20px, 6.6vw, 34px); white-space: nowrap; } }
 .ppf-title .sub { font-style: italic; font-size: 17px; color: var(--ink-soft); }
 
 /* cover credit, as printed at the foot of the cover */

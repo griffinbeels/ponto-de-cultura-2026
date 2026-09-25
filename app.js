@@ -70,7 +70,16 @@
   function hex(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
   function mix(a, b, t) { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], t))).join(',')})`; }
 
-  const state = { vw: innerWidth, vh: innerHeight, lang: 'en', start: 0 };
+  const state = { vw: innerWidth, vh: innerHeight, lang: 'en', start: 0, boxH: {} };
+  // Phones' browser toolbars slide in and out while you scroll (Safari's come
+  // back as soon as you scroll up), changing the window's height. Laying the
+  // page out against that height would move everything under your finger in
+  // mid-scroll, so layout uses the smallest viewport height (100svh), which
+  // stays put while the toolbars come and go.
+  const vhProbe = document.createElement('div');
+  vhProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100vh;height:100svh;visibility:hidden;pointer-events:none';
+  document.body.appendChild(vhProbe);
+  const stableVh = () => vhProbe.offsetHeight || innerHeight;
   const scenes = [];
   const docTop = n => n.getBoundingClientRect().top + scrollY;
 
@@ -84,8 +93,11 @@
       return { S, cx: vw / 2, cy: desk ? vh * .45 : vh * .46 };
     }
     if (desk) { const S = Math.min(vh * .9, vw * .5); return { S, cx: vw * .68, cy: vh * .5, read: vh * .36 }; }
-    // the Past·Present·Future ring is simpler, so it can be smaller and leave room for longer paragraphs
-    const top = 64, S = mode === 'ring' ? Math.min(vw * .86, vh * .4) : Math.min(vw * .98, vh * .5);
+    // the Past·Present·Future ring is simpler, so it can be smaller and leave room for longer paragraphs;
+    // and the diagram gives up just enough height that the section's tallest box fits under it —
+    // a box is never pinned over the diagram (Safari's toolbars leave phones short)
+    const top = 64, room = vh - top - (state.boxH[mode] || 0) - 14;
+    const S = Math.max(vh * .3, Math.min(mode === 'ring' ? Math.min(vw * .86, vh * .4) : Math.min(vw * .98, vh * .5), room));
     return { S, cx: vw / 2, cy: top + S / 2 - 6, read: top + S + 2 };
   }
   function place(svg, L) {
@@ -229,7 +241,9 @@
       const glow = el('circle', { r: 34, fill: m.a === 270 ? `url(#${id}Night)` : `url(#${id}Sun)`, opacity: 0 }, g);
       const c = el('circle', { r: 17, fill: m.fill, stroke: C.ink, 'stroke-width': m.a === 180 ? 2 : 0 }, g);
       const dot = el('circle', { r: 6, fill: C.sun, opacity: 0 }, g);
-      return Object.assign({ g, glow, c, dot }, m);
+      // a generous invisible tap target (the main story makes it live, see .hit in styles.css)
+      const hit = el('circle', { r: 34, class: 'hit', fill: 'transparent' }, g);
+      return Object.assign({ g, glow, c, dot, hit }, m);
     });
 
     J.passer = el('circle', { r: 7, fill: C.cream, stroke: C.ink, 'stroke-width': 2, opacity: 0 }, svg);
@@ -757,7 +771,9 @@
     // Its four stages… — as it rises: NSEKE/MPEMBA, then the disc and sky, while
     // the sun travels on round to Kala; its one sentence pulses the four moments
     // in order, Kala to Musoni.
-    { via: [[.45, 3], [.46, 7.5]], arrive: 8.4, chunks: [8.8] },
+    // (3 → 7.5 is the step-by-step's stretch, invisible here; it is crossed over a short
+    // stretch of scroll rather than a cliff, so the diagram glides through it both ways)
+    { via: [[.45, 3], [.6, 7.5]], arrive: 8.4, chunks: [8.8] },
     { arrive: 9, chunks: [9, 9] },          // KALA — the sun rises while the box does
     { arrive: 10, chunks: [10, 10] },       // TUKULA — noon
     { arrive: 11, chunks: [11, 11, 11] },   // LUVEMBA — sunset
@@ -911,6 +927,7 @@
       if (!b) continue;
       let shown = 0;
       while (shown < b.cs.length && y >= b.cs[shown]) shown++;
+      if (JUMP.on) shown = b.n;                              // a tap-jump shows every box in full
       if (shown !== b.shown) {
         b.shown = shown;
         const at = performance.now();
@@ -950,7 +967,10 @@
 
   let typedParas = [];
   function measure() {
-    state.vw = innerWidth; state.vh = innerHeight;
+    state.vw = innerWidth; state.vh = stableVh();
+    // the tallest box in each kind of section decides how much room its diagram leaves
+    state.boxH = {};
+    for (const s of scenes) for (const b of s.boxes) if (b) state.boxH[s.mode] = Math.max(state.boxH[s.mode] || 0, b.el.offsetHeight);
     for (const s of scenes) { measureScene(s); for (const b of s.boxes) if (b) b.caretIdx = -1; }
     measureProgress();
   }
@@ -1047,7 +1067,9 @@
     const vh = state.vh;
     for (const s of scenes) {
       const r = s.section.getBoundingClientRect();
+      const was = s.visible;
       s.visible = r.height > 0 && r.bottom > -vh * .1 && r.top < vh * 1.1;
+      if (s.visible && !was) s.T = null;   // coming back into view: start from the right state, don't glide from a stale one
     }
     // The diagram glides to where the scroll says it should be (about half a
     // second), so a chunk and the picture change it brings arrive together.
@@ -1057,7 +1079,10 @@
       if (!s.visible) continue;
       updateBoxes(s);
       const target = timeline(s.keys, scrollY);
-      s.T = (s.T == null || RM || Math.abs(target - s.T) > 3) ? target : s.T + (target - s.T) * (1 - Math.exp(-dt / 150));
+      // glide — unless the page itself leapt (a scrollbar drag, a link): then start from the right state
+      const leapt = s.lastY != null && Math.abs(scrollY - s.lastY) > state.vh * 1.5 && !JUMP.on;
+      s.lastY = scrollY;
+      s.T = (s.T == null || RM || leapt) ? target : s.T + (target - s.T) * (1 - Math.exp(-dt / 150));
       if (Math.abs(target - s.T) < 1e-4) s.T = target;
       s.render(s.T, now, s);
     }
@@ -1102,20 +1127,26 @@
   const SUN = { a: 20, a0: null, K: 360, last: 0, hit: [-1e9, -1e9, -1e9, -1e9], seqAt: -1e9, seqShown: 0, pulse: [0, 0, 0, 0] };
   const PULSE_MS = 650, SEQ_GAP = 240;
   function storySun(s, t, now) {
-    const dt = SUN.last ? Math.min(100, now - SUN.last) : 16;
+    const fresh = !SUN.last || now - SUN.last > 120;     // first frame back in view
+    const dt = fresh ? 16 : now - SUN.last;
     SUN.last = now;
     const read = s.boxes[1], kala = s.boxes[3], four = s.boxes[2];
     const y = scrollY, y0 = read.pinEnd, y1 = kala.pinStart;
     const before = SUN.a;
     if (y < y0) {                                        // circling, 40° a second
       SUN.a0 = null;
-      if (!RM) SUN.a += dt * .04;
+      if (SUN.spin) {                                    // sent round to a tapped dot
+        const p = RM ? 1 : clamp((now - SUN.spin.t0) / SUN.spin.dur);
+        SUN.a = lerp(SUN.spin.from, SUN.spin.to, smooth(p));
+        if (p >= 1) SUN.spin = null;
+      } else if (!RM) SUN.a += dt * .04;
     } else {
+      SUN.spin = null;
       if (SUN.a0 == null) { SUN.a0 = SUN.a; SUN.K = 360 * Math.ceil(SUN.a / 360 - 1e-6); }   // the next Kala ahead
       const target = y < y1
         ? lerp(SUN.a0, SUN.K, smooth(clamp((y - y0) / Math.max(1, y1 - y0))))
         : SUN.K + thetaAt(Math.max(9, t));
-      SUN.a += (target - SUN.a) * (RM ? 1 : 1 - Math.exp(-dt / 140));
+      SUN.a += (target - SUN.a) * (RM || fresh ? 1 : 1 - Math.exp(-dt / 140));
       if (Math.abs(target - SUN.a) < 1e-3) SUN.a = target;
     }
     // crossings (with half a degree of grace, so an eased arrival still counts)
@@ -1130,7 +1161,55 @@
     return SUN;
   }
 
-  makeScene($('#journey'), STORY_PLAN, 'diagram', (t, now, s) => {
+  // Tapping a stage dot. While the sun circles (the cover and The Kongo
+  // Cosmogram) it sends the sun on round to that dot — a full lap if it is at
+  // or just past it — and it carries on circling from there. From the four
+  // stages on, it takes you to that stage: the page scrolls there (forwards or
+  // back) to where its box is complete with the sun on its dot, and every box
+  // shows its full text on the way. Touching the screen or the wheel stops it.
+  function spinTo(i) {
+    let dist = ((i * 90 - SUN.a) % 360 + 360) % 360;
+    if (dist < 20) dist += 360;
+    SUN.spin = { from: SUN.a, to: SUN.a + dist, t0: performance.now(), dur: 450 + dist / 360 * 950 };
+    kick();
+  }
+  const JUMP = { on: false, raf: 0 };
+  const easeInOut = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+  function endJump() {
+    if (JUMP.raf) cancelAnimationFrame(JUMP.raf);
+    JUMP.raf = 0; JUMP.on = false;
+    document.documentElement.classList.remove('jumping');
+    document.documentElement.style.scrollBehavior = '';
+    kick();
+  }
+  function jumpTo(y) {
+    endJump();
+    const from = scrollY, to = clamp(y, 0, document.documentElement.scrollHeight - innerHeight);
+    const dist = Math.abs(to - from);
+    if (dist < 2) return;
+    const dur = RM ? 0 : Math.min(1600, 650 + dist / state.vh * 140), t0 = performance.now();
+    JUMP.on = true;
+    document.documentElement.classList.add('jumping');       // words appear at once, no ripple
+    document.documentElement.style.scrollBehavior = 'auto';  // each step lands exactly
+    const step = now => {
+      const p = dur ? clamp((now - t0) / dur) : 1;
+      window.scrollTo(0, lerp(from, to, easeInOut(p)));
+      if (p < 1) JUMP.raf = requestAnimationFrame(step); else { JUMP.raf = 0; requestAnimationFrame(endJump); }
+    };
+    JUMP.raf = requestAnimationFrame(step);
+  }
+  for (const ev of ['wheel', 'touchstart', 'keydown']) addEventListener(ev, () => { if (JUMP.on) endJump(); }, { passive: true });
+  function jumpToStage(i) {
+    const b = storyScene.boxes[3 + i];                        // KALA, TUKULA, LUVEMBA, MUSONI
+    jumpTo(b.cs[b.cs.length - 1] + 4);                        // its last chunk out, the sun still on its dot
+  }
+  story.circles.forEach((c, i) => c.hit.addEventListener('click', e => {
+    e.stopPropagation();
+    if (scrollY < storyScene.boxes[1].pinEnd) spinTo(i); else jumpToStage(i);
+  }));
+  $('#cosmo').classList.add('taps');
+
+  const storyScene = makeScene($('#journey'), STORY_PLAN, 'diagram', (t, now, s) => {
     // the cover emblem shrinks into place while the first box rises
     const first = s.boxes[1];
     storyOpt.layout = first ? clamp(scrollY / Math.max(1, first.pinStart)) : 1;
@@ -1175,11 +1254,8 @@
   $$('[data-set-lang]').forEach(b => b.addEventListener('click', () => setLang(b.dataset.setLang)));
 
   const io = new IntersectionObserver(entries => {
-    for (const e of entries) {
-      const sc = scenes.find(s => s.section === e.target);
-      if (sc) sc.visible = e.isIntersecting;
-      if (e.target.id === 'back') backVisible = e.isIntersecting;
-    }
+    // (which sections are on screen is read in frame(); this only wakes the loop)
+    for (const e of entries) if (e.target.id === 'back') backVisible = e.isIntersecting;
     kick();
   }, { rootMargin: '10% 0px' });
   scenes.forEach(s => io.observe(s.section));
@@ -1196,7 +1272,8 @@
   $$('.reveal').forEach(n => reveal.observe(n));
 
   addEventListener('scroll', kick, { passive: true });
-  addEventListener('resize', () => { measure(); kick(); });
+  // a real resize (rotation, window width) re-lays the page; a toolbar sliding in or out does not
+  addEventListener('resize', () => { if (innerWidth !== state.vw || stableVh() !== state.vh) measure(); kick(); });
   // Re-measure whenever a box changes size (web fonts arriving, language
   // switch, rotation) — each box's pin window depends on its height.
   const resized = new ResizeObserver(() => { measure(); kick(); });
