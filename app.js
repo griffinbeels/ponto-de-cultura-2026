@@ -99,7 +99,6 @@
   }
 
   /* ═════════════════ THE JOURNEY: cover → cosmogram → four moments ═════════════════ */
-  const J = {};
   const FEATHER = 'M0 -17C9 -30 16 -56 13 -78C11 -91 5 -100 0 -106C-5 -100 -11 -91 -13 -78C-16 -56 -9 -30 0 -17Z';
   const FEATHER_VEINS = (() => {
     let d = 'M0 -21L0 -101';
@@ -116,23 +115,26 @@
     { a: 270, name: 'MUSONI', en: 'South', pt: 'Sul', fill: C.musoni, lx: 0, ly: 187 },
   ];
 
-  function buildJourney() {
-    const svg = $('#cosmo');
+  // One cosmogram drawing, used twice: the main story, and the step-by-step
+  // breakdown under the labelled diagram on the back page. `id` keeps the two
+  // copies' gradients and clip paths apart.
+  function buildCosmogram(svg, id) {
+    const J = { svg };
     const defs = el('defs', null, svg);
-    glowGradient(defs, 'jSun', C.sun);
-    glowGradient(defs, 'jNight', '#5A63C8');
-    const clip = el('clipPath', { id: 'jWater' }, defs);
+    glowGradient(defs, id + 'Sun', C.sun);
+    glowGradient(defs, id + 'Night', '#5A63C8');
+    const clip = el('clipPath', { id: id + 'Water' }, defs);
     J.clipC = el('circle', { r: 100 }, clip);
     // dark wedges (Kala, Tukula) — used to flip labels to cream where they sit on dark paint
-    const darkClip = el('clipPath', { id: 'jDark' }, defs);
+    const darkClip = el('clipPath', { id: id + 'Dark' }, defs);
     J.darkClip = el('path', { d: '' }, darkClip);
-    el('path', { id: 'jArcTop', d: 'M-114 0A114 114 0 0 1 114 0' }, defs);
-    el('path', { id: 'jArcBot', d: 'M-128 0A128 128 0 0 0 128 0' }, defs);
+    el('path', { id: id + 'ArcTop', d: 'M-114 0A114 114 0 0 1 114 0' }, defs);
+    el('path', { id: id + 'ArcBot', d: 'M-128 0A128 128 0 0 0 128 0' }, defs);
 
     J.disk = el('circle', { r: 207, fill: '#F0D8C6', opacity: 0 }, svg);
     J.wedges = MOMENTS.map(m => el('path', { fill: m.fill, d: '' }, svg));
 
-    const inner = el('g', { 'clip-path': 'url(#jWater)' }, svg);
+    const inner = el('g', { 'clip-path': `url(#${id}Water)` }, svg);
     J.topHalf = el('rect', { x: -210, y: -210, width: 420, height: 210, fill: C.sun, opacity: 0 }, inner);
     J.botHalf = el('rect', { x: -210, y: 0, width: 420, height: 210, fill: C.navy, opacity: 0 }, inner);
     J.ripples = [0, 1, 2].map(() => el('circle', { r: 0, fill: 'none', stroke: C.navy, 'stroke-width': 1.8, opacity: 0 }, inner));
@@ -162,11 +164,11 @@
     }
     J.ringText = el('g', { 'font-family': 'Lexend Deca, Poppins, sans-serif', 'font-weight': 800, 'font-size': 15.5, fill: C.ink, 'letter-spacing': 1.1, opacity: 0 }, J.emblem);
     const tt = el('text', { 'text-anchor': 'middle' }, J.ringText);
-    const tp = linkPath(el('textPath', { startOffset: '50%' }, tt), '#jArcTop');
+    const tp = linkPath(el('textPath', { startOffset: '50%' }, tt), `#${id}ArcTop`);
     tp.append('CAPOEIRA = BRASIL ');
     el('tspan', { 'font-family': 'Knewave, cursive', 'font-weight': 400, 'font-size': 17.5 }, tp).textContent = '2026';
     const bt = el('text', { 'text-anchor': 'middle' }, J.ringText);
-    linkPath(el('textPath', { startOffset: '50%' }, bt), '#jArcBot').textContent = 'LOS ANGELES = MESTRE BONECO';
+    linkPath(el('textPath', { startOffset: '50%' }, bt), `#${id}ArcBot`).textContent = 'LOS ANGELES = MESTRE BONECO';
     for (const a of [171, 13]) {
       const g = el('g', { transform: `rotate(${-a}) translate(122 0)`, stroke: C.ink, 'stroke-width': 2.4, 'stroke-linecap': 'round' }, J.ringText);
       el('line', { x1: -3, y1: -5, x2: -3, y2: 5 }, g);
@@ -204,7 +206,7 @@
     };
     J.worlds = el('g', { opacity: 0 }, lab);
     labelSet(J.worlds, C.ink);
-    const light = el('g', { 'clip-path': 'url(#jDark)' }, J.worlds);
+    const light = el('g', { 'clip-path': `url(#${id}Dark)` }, J.worlds);
     labelSet(light, C.cream);
 
     J.names = el('g', { opacity: 0 }, lab);
@@ -218,7 +220,7 @@
 
     J.circles = MOMENTS.map(m => {
       const g = el('g', null, svg);
-      const glow = el('circle', { r: 34, fill: m.a === 270 ? 'url(#jNight)' : 'url(#jSun)', opacity: 0 }, g);
+      const glow = el('circle', { r: 34, fill: m.a === 270 ? `url(#${id}Night)` : `url(#${id}Sun)`, opacity: 0 }, g);
       const c = el('circle', { r: 17, fill: m.fill, stroke: C.ink, 'stroke-width': m.a === 180 ? 2 : 0 }, g);
       const dot = el('circle', { r: 6, fill: C.sun, opacity: 0 }, g);
       return Object.assign({ g, glow, c, dot }, m);
@@ -228,7 +230,7 @@
     J.passRipple = el('ellipse', { rx: 0, ry: 0, fill: 'none', stroke: C.navy, 'stroke-width': 1.6, opacity: 0 }, svg);
 
     J.sun = el('g', { opacity: 0 }, svg);
-    el('circle', { r: 44, fill: 'url(#jSun)' }, J.sun);
+    el('circle', { r: 44, fill: `url(#${id}Sun)` }, J.sun);
     J.rays = el('g', { stroke: C.sun, 'stroke-width': 2.6, 'stroke-linecap': 'round' }, J.sun);
     for (let i = 0; i < 10; i++) {
       const [x1, y1] = P(16, i * 36), [x2, y2] = P(23, i * 36);
@@ -241,17 +243,33 @@
       fill: C.brush, stroke: C.ink, 'stroke-width': 1.5, 'paint-order': 'stroke', 'stroke-linejoin': 'round',
       textLength: 340, lengthAdjust: 'spacingAndGlyphs', opacity: 0,
     });
+    return J;
+  }
 
-    // stars for the night sky
-    const stars = $('#stars');
+  function buildStars(stars) {
     let seed = 7;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     for (let i = 0; i < 70; i++) {
       const c = el('circle', { cx: f(rnd() * 100), cy: f(rnd() * 100), r: f(.12 + rnd() * .28) }, stars);
       c.style.animationDelay = f(-rnd() * 3.2) + 's';
     }
-    J.words = $$('#journey .w');
   }
+
+  // Each section scrolls through its own steps; this maps a section's step
+  // position onto the one timeline the cosmogram knows (see renderCosmogram).
+  function remap(keys, t) {
+    if (t <= keys[0][0]) return keys[0][1];
+    for (let i = 0; i < keys.length - 1; i++) {
+      const [t0, a0] = keys[i], [t1, a1] = keys[i + 1];
+      if (t <= t1) return lerp(a0, a1, (t - t0) / (t1 - t0));
+    }
+    return keys[keys.length - 1][1];
+  }
+  // Main story: cover → The Kongo Cosmogram → straight on to the four stages.
+  // The labelled-diagram steps (2–7) are skipped here and live in the breakdown.
+  const STORY_KEYS = [[0, 0], [1, 1], [1.3, 1.9], [1.45, 2.5], [1.6, 3], [1.62, 7.5], [2, 8], [3, 9], [4, 10], [5, 11], [6, 12], [7, 13]];
+  // Step-by-step breakdown: one back-page label per step, water through arrows.
+  const BREAKDOWN_KEYS = [[-1, 1.5], [0, 2], [1, 3], [2, 4], [3, 5], [4, 6], [5, 7], [6, 7.5]];
 
   // the sky follows the sun: [angle, top colour, bottom colour]
   const SKY = [
@@ -279,9 +297,15 @@
     return 360;
   }
 
-  function renderJourney(t, now) {
+  // t is a position on the full timeline: 0 cover · 1 The Kongo Cosmogram ·
+  // 2 water · 3 two worlds · 4 passage · 5 small circles · 6 poles · 7 arrows ·
+  // 8 four stages · 9 Kala · 10 Tukula · 11 Luvemba · 12 Musoni · 13 cycle closed.
+  // opt.labelled switches the labelled-diagram effects (2–7) on or off, so the
+  // main story can pass straight through that stretch without showing them.
+  function renderCosmogram(J, t, now, opt) {
     const sec = now / 1000;
-    const intro = RM ? 1 : state.start ? clamp((now - state.start) / 2800) : 0;
+    const intro = opt.intro != null ? opt.intro : RM ? 1 : state.start ? clamp((now - state.start) / 2800) : 0;
+    const A = opt.labelled ? 1 : 0;
 
     // stage placement: big and centred on the cover, then up top for the story
     const cov = layout('cover'), dia = layout('diagram');
@@ -309,7 +333,7 @@
     });
 
     // water circle (the emblem's ring becomes "Circle represents Water")
-    const waterHi = bump(t, 1.45, 1.95, 2.45, 2.9);
+    const waterHi = A * bump(t, 1.45, 1.95, 2.45, 2.9);
     set(J.water, {
       r: f(ringR), 'stroke-width': f(lerp(5, 2.6, m) + waterHi * 1.6),
       stroke: mix(C.ink, C.navy, waterHi), 'stroke-dashoffset': f(1 - ramp(intro, .1, .44)),
@@ -321,8 +345,8 @@
     });
 
     // the two worlds, above and below the line
-    const worlds = bump(t, 2.45, 2.95, 3.45, 3.9);
-    const worldsSoft = ramp(t, 2.45, 2.95) * (1 - ramp(t, 7.6, 8.3));
+    const worlds = A * bump(t, 2.45, 2.95, 3.45, 3.9);
+    const worldsSoft = A * ramp(t, 2.45, 2.95) * (1 - ramp(t, 7.6, 8.3));
     J.topHalf.setAttribute('opacity', f(.1 * worldsSoft + .14 * worlds));
     J.botHalf.setAttribute('opacity', f(.1 * worldsSoft + .14 * worlds));
     J.worlds.setAttribute('opacity', f(ramp(t, 2.5, 2.95)));
@@ -337,21 +361,21 @@
     });
 
     // passage through water: a traveller crossing the line, rippling it
-    const pass = bump(t, 3.45, 3.95, 4.45, 4.9);
+    const pass = A * bump(t, 3.45, 3.95, 4.45, 4.9);
     const py = -88 * Math.cos(sec * 1.25);
     set(J.passer, { cy: f(py), opacity: f(pass) });
     const rph = ((sec * 1.25 / Math.PI) + .5) % 1;
     set(J.passRipple, { rx: f(6 + 58 * rph), ry: f(2 + 12 * rph), opacity: f(pass * (1 - rph) * .9) });
 
     // poles
-    const poles = bump(t, 5.45, 5.95, 6.45, 6.9);
+    const poles = A * bump(t, 5.45, 5.95, 6.45, 6.9);
     J.poleN.setAttribute('opacity', f(poles * .85));
     J.poleS.setAttribute('opacity', f(poles * .85));
 
     // arrows: drawn one after another, in the sun's direction
     const arrowsOut = ramp(t, 7.7, 8.3);
     J.arrows.forEach((ar, i) => {
-      const d = ramp(t, 6.45 + i * .09, 6.8 + i * .09);
+      const d = A * ramp(t, 6.45 + i * .09, 6.8 + i * .09);
       ar.arc.setAttribute('stroke-dashoffset', f(1 - d));
       ar.head.setAttribute('opacity', f(ramp(d, .85, 1)));
       ar.g.setAttribute('opacity', f(1 - arrowsOut));
@@ -359,7 +383,7 @@
 
     // ── the sun ──
     const loopA = (sec * 40) % 360;
-    const oIntro = bump(t, .55, .95, 1.45, 1.85), oArrows = bump(t, 6.6, 7, 7.45, 7.78);
+    const oIntro = (opt.introOrbit ? 1 : 0) * bump(t, .55, .95, 1.45, 1.85), oArrows = A * bump(t, 6.6, 7, 7.45, 7.78);
     const journey = ramp(t, 7.8, 8.35);
     const theta = t >= 7.8 ? thetaAt(t) : loopA;
     const sunO = t >= 7.8 ? journey : Math.max(oIntro, oArrows);
@@ -370,7 +394,7 @@
 
     // the five words of the cycle follow the sun around
     const wordsOn = oIntro > .35;
-    for (const w of J.words) w.classList.toggle('on', wordsOn && angDist(loopA, +w.dataset.a) < 26);
+    for (const w of opt.words || []) w.classList.toggle('on', wordsOn && angDist(loopA, +w.dataset.a) < 26);
 
     // ── the four moments: the sun paints each quarter as it passes ──
     const thJ = t >= 7.8 ? theta : -24;
@@ -394,7 +418,7 @@
       const [x, y] = P(cR, c.a);
       const pop = backOut(ramp(intro, i * .05, .2 + i * .05));
       // small circles: moments of the sun
-      const small = bump(t, 4.45, 4.95, 5.45, 5.9);
+      const small = A * bump(t, 4.45, 4.95, 5.45, 5.9);
       const ph = ((sec * .8) - i * .25) % 1, beat = Math.exp(-((ph < 0 ? ph + 1 : ph) * 7));
       // the circle nearest the sun glows during the four moments
       const near = t >= 8.6 ? clamp(1 - angDist(theta, c.a) / 40) : 0;
@@ -406,14 +430,15 @@
       J.nameEls[i].setAttribute('opacity', f(t >= 8.6 ? .45 + .55 * near : 1));
     });
 
-    // sky
+    // sky (main story only)
+    if (!opt.sky) return;
     const skyMix = ramp(t, 7.6, 8.4);
     const [top, bottom] = skyAt(thJ);
-    J.sky.style.background = skyMix > .001
+    opt.sky.style.background = skyMix > .001
       ? `linear-gradient(180deg, ${mix2(C.paper, top, skyMix)}, ${mix2(C.paper, bottom, skyMix)})`
       : '';
     const night = thJ < 20 ? 1 - ramp(thJ, -30, 18) : ramp(thJ, 168, 215) * (1 - ramp(thJ, 325, 368));
-    J.stars.style.opacity = f(night * skyMix);
+    opt.stars.style.opacity = f(night * skyMix);
     themeColor.setAttribute('content', skyMix > .5 ? '#1B1412' : '#EBA98C');
   }
   const themeColor = document.querySelector('meta[name="theme-color"]');
@@ -677,12 +702,19 @@
     }
   }
 
+  // The closing paragraph types in as it rises. The reveal must finish by the
+  // time the page runs out: on a wide screen the paragraph never climbs far up
+  // the screen before the page ends, so the end point is capped at the bottom.
   function typed() {
     if (!typedEl) return;
     const r = typedEl.getBoundingClientRect();
     if (r.top > state.vh || r.bottom < 0) return;
-    const p = clamp((state.vh * .92 - r.top) / (r.height + state.vh * .15));
-    const n = Math.round(p * typedWords.length * 1.1);
+    const top = r.top + scrollY;
+    const start = top - state.vh * .92;
+    const maxScroll = document.documentElement.scrollHeight - state.vh;
+    const end = Math.min(top + r.height - state.vh * .75, maxScroll - 2);
+    const p = end > start ? clamp((scrollY - start) / (end - start)) : 1;
+    const n = Math.ceil(p * typedWords.length);
     if (n === lastTyped) return;
     lastTyped = n;
     typedWords.forEach((w, i) => w.classList.toggle('on', i < n));
@@ -720,12 +752,27 @@
   }
 
   // ── boot ──
-  buildJourney(); J.svg = $('#cosmo'); J.sky = $('#journey .sky'); J.stars = $('#stars');
+  const story = buildCosmogram($('#cosmo'), 'j');
+  const storyOpt = { labelled: false, introOrbit: true, words: $$('#journey .w'), sky: $('#journey .sky'), stars: $('#stars') };
+  buildStars($('#stars'));
+  const breakdown = buildCosmogram($('#cosmo-steps'), 'k');
+  const breakdownOpt = { labelled: true, introOrbit: false, intro: 1 };
   buildPPF(); Q.svg = $('#ppf-svg');
   buildLabeled(); buildDikenga();
 
-  makeScene($('#journey'), (t, now) => renderJourney(t, now), 'diagram');
+  makeScene($('#journey'), (t, now) => renderCosmogram(story, remap(STORY_KEYS, t), now, storyOpt), 'diagram');
   const ppf = makeScene($('#ppf'), (t, now, s) => renderPPF(t, now, s), 'ring');
+  makeScene($('#anatomy'), (t, now) => renderCosmogram(breakdown, remap(BREAKDOWN_KEYS, t), now, breakdownOpt), 'diagram');
+
+  // the step-by-step breakdown opens under the labelled diagram on the back page
+  const deepBtn = $('#deep-btn'), anatomy = $('#anatomy');
+  deepBtn.addEventListener('click', () => {
+    const open = anatomy.hidden;
+    anatomy.hidden = !open;
+    deepBtn.setAttribute('aria-expanded', String(open));
+    measure(); kick();
+    if (open) anatomy.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' });
+  });
   clauseSteps = [1, 2].map(i => ({ i, spans: $$('.c', ppf.steps[i]) }));
 
   typedEl = $('#typed');
