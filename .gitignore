@@ -1,3 +1,5 @@
 .tasks/
 assets/.tasks/
 .iteration/
+node_modules/
+.wrangler/

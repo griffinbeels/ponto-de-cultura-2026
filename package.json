@@ -1,0 +1,10 @@
+{
+  "name": "cbla-ponto-de-cultura",
+  "private": true,
+  "scripts": {
+    "deploy": "node tools/deploy.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "4.140.0"
+  }
+}

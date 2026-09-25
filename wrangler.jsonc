@@ -1,0 +1,17 @@
+// Serves the site at https://cblapontodecultura.org as static assets on Cloudflare
+// (free, unlimited requests: no Worker script runs). Deploy with `npm run deploy`.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cblapontodecultura",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    // tools/deploy.mjs fills this with the latest commit's site files
+    "directory": ".wrangler/site"
+  },
+  "routes": [
+    { "pattern": "cblapontodecultura.org", "custom_domain": true },
+    { "pattern": "www.cblapontodecultura.org", "custom_domain": true }
+  ],
+  "workers_dev": false,
+  "preview_urls": false
+}

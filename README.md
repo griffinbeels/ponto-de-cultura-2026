@@ -1,7 +1,7 @@
 # Ponto de Cultura 2026 — Past · Present · Future
 
 The Capoeira Brasil Los Angeles (Mestre Boneco) Ponto de Cultura 2026 pamphlet, told as a scroll story:
-https://griffinbeels.github.io/ponto-de-cultura-2026/
+https://cblapontodecultura.org/
 
 All wording is the pamphlet's own, verbatim and in its printed order, in English and Portuguese.
 The diagrams are recreated from the pamphlet's back page and animated.
