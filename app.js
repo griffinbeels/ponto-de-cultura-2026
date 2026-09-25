@@ -782,7 +782,7 @@
     for (const chunk of $$('[data-k]', card)) {
       const k = +chunk.dataset.k, list = [];
       wrapReveal(chunk, list);
-      list.forEach((w, j) => { w.k = k; w.el.style.setProperty('--j', Math.min(j, 14)); });
+      list.forEach((w, j) => { w.k = k; w.j = Math.min(j, 14); w.el.style.setProperty('--j', w.j); });
       box.words.push(...list);
       for (const c of $$('.c', chunk)) box.phrases.push({ el: c, k });
       box.n = Math.max(box.n, k + 1);
@@ -895,7 +895,8 @@
       while (shown < b.cs.length && y >= b.cs[shown]) shown++;
       if (shown !== b.shown) {
         b.shown = shown;
-        for (const w of b.words) { const on = w.k < shown; if (w.on !== on) { w.on = on; w.el.classList.toggle('on', on); } }
+        const at = performance.now();
+        for (const w of b.words) { const on = w.k < shown; if (w.on !== on) { w.on = on; w.onAt = at; w.el.classList.toggle('on', on); } }
         for (const ph of b.phrases) ph.el.classList.toggle('cur', ph.k === shown - 1);
         b.el.classList.toggle('complete', shown >= b.n);
       }
@@ -944,10 +945,15 @@
     for (let n = node; n && n !== root; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; }
     return [x, y];
   }
+  // A word has finished appearing once its ripple delay and its fade are over
+  // (the .rw transition in styles.css: 32ms per place in its chunk, then .28s).
+  // The caret only moves past words that have, so it types along behind the
+  // text and never waits ahead of it.
+  const WORD_STEP = 32, WORD_FADE = 280;
   function placeCaret(b) {
-    const vis = b.vis[state.lang] || [];
+    const vis = b.vis[state.lang] || [], now = performance.now();
     let idx = 0;
-    while (idx < vis.length && vis[idx].on) idx++;       // chunks appear in reading order
+    while (idx < vis.length && vis[idx].on && (RM || now >= vis[idx].onAt + vis[idx].j * WORD_STEP + WORD_FADE)) idx++;
     if (idx === b.caretIdx) return;
     const moved = b.caretIdx >= 0;
     b.caretIdx = idx;
