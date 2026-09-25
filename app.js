@@ -498,23 +498,30 @@
     Q.sun.setAttribute('opacity', f(ramp(t, -.5, -.1)));
 
     // beats inside the two paragraphs
-    const b1 = scene.beat(1), b2 = scene.beat(2);          // continuous 0..4, or -1 outside
-    const inP1 = b1 >= 0 && t < 2, inP2 = b2 >= 0 && t >= 2 && t < 3;
+    // Beats follow the words (see index.html data-b):
+    //   paragraph 1 — 0 "We chose … idea:" · 1 "where we are going" · 2 past · 3 present · 4 future
+    //   paragraph 2 — 0 "The same is true of Capoeira." · 1 receive · 2 transform · 3 pass on
+    const b1 = scene.beat(1), b2 = scene.beat(2);          // continuous, or -1 before arriving
+    const inP2 = b2 >= 0 && t < 3, inP1 = b1 >= 0 && !inP2 && t < 3;
     const focus = (b, i) => bump(b, i - .15, i + .1, i + .9, i + 1.15);
     const dim = x => .3 + .7 * x;
     let fPast = 1, fPres = 1, fFut = 1, fDir = 0;
     if (inP1) {
-      fDir = focus(b1, 0); fPast = dim(focus(b1, 1)); fPres = dim(focus(b1, 2)); fFut = dim(Math.max(focus(b1, 3), fDir * .6));
+      const lead = 1 - ramp(b1, .85, 1.15);   // while the opening words type in, all three stay lit
+      fDir = focus(b1, 1);
+      fPast = lerp(dim(focus(b1, 2)), 1, lead);
+      fPres = lerp(dim(focus(b1, 3)), 1, lead);
+      fFut = lerp(dim(Math.max(focus(b1, 4), fDir * .6)), 1, lead);
     }
     Q.lPast.setAttribute('opacity', f(ramp(t, -.35, -.05) * fPast));
     Q.lPresent.setAttribute('opacity', f(ramp(t, -.25, .05) * fPres));
     Q.lFuture.setAttribute('opacity', f(ramp(t, -.15, .15) * fFut));
-    Q.past.setAttribute('stroke-width', f(6 + (inP1 ? 3 * focus(b1, 1) : 0)));
-    Q.future.setAttribute('stroke-width', f(5 + (inP1 ? 3 * focus(b1, 3) : 0)));
+    Q.past.setAttribute('stroke-width', f(6 + (inP1 ? 3 * focus(b1, 2) : 0)));
+    Q.future.setAttribute('stroke-width', f(5 + (inP1 ? 3 * focus(b1, 4) : 0)));
     Q.heads.setAttribute('opacity', f(ramp(t, -.3, .05) * (.7 + .3 * fDir)));
 
     // Capoeira: generations on the ring, a legacy passed along it
-    const dotsIn = t >= 3 ? 1 : inP2 ? ramp(b2, 0, .7) : t > 2 ? 0 : 0;
+    const dotsIn = t >= 3 ? 1 : inP2 ? ramp(b2, 0, .7) : 0;
     const flowPast = t >= 3 ? 1 : inP2 ? ramp(b2, .95, 1.35) : 0;
     const change = t >= 3 ? .5 : inP2 ? bump(b2, 1.9, 2.2, 2.85, 3.2) : 0;
     const flowFut = t >= 3 ? 1 : inP2 ? ramp(b2, 2.95, 3.3) : 0;
@@ -533,7 +540,7 @@
       const [x, y] = P(QR, a);
       set(p.n, { cx: f(x), cy: f(y), opacity: f(vis * .95), fill: inPast ? C.brush : C.sun, r: f(3.6 + 1.2 * near) });
     });
-    const grow = 1 + .32 * change + .14 * (inP1 ? focus(b1, 2) : 0);
+    const grow = 1 + .32 * change + .14 * (inP1 ? focus(b1, 3) : 0);
     Q.core.setAttribute('r', f(12.5 * grow));
     Q.halo.setAttribute('r', f(46 * grow));
     Q.rays.setAttribute('transform', `rotate(${f(RM ? 0 : sec * (30 + 160 * change))}) scale(${f(grow)})`);
@@ -567,30 +574,60 @@
     B.lSun = el('circle', { r: 5.5, fill: C.sun, stroke: C.sunDeep, 'stroke-width': 1, opacity: 0 }, svg);
     B.lCenter = [cx, cy, rc];
 
-    const T = el('g', { 'font-family': 'Special Elite, Courier New, monospace', 'font-size': 11, fill: C.ink, 'text-anchor': 'middle' }, svg);
-    const block = (x, y, lines, d, anchor = 'middle', lh = 13.5) => {
-      const g = el('g', { class: 'lbl', style: `--d:${d}s`, 'text-anchor': anchor }, T);
-      lines.forEach((s, i) => txt(g, x, y + i * lh, s));
-      return g;
+    // The printed labels, and the same labels in Portuguese (ours — the back
+    // page is printed in English only). Portuguese runs longer, so its version
+    // of the figure is a little wider on the right.
+    const LABELS = {
+      en: {
+        W: 416, H: 462,
+        top: ['Pole of Physical Power:', 'North, Maleness, Noon'],
+        small: ['Small Circles:', 'Moments of the Sun,', 'Representing Phases', 'of Human Life'],
+        water: ['Circle', 'represents Water'],
+        above: ['Above the Line:', 'World of Humans'], below: ['Below the Line:', 'World of Spirits'], side: 306,
+        mid: [['Passage', 'through Water:'], ['Movement between', 'Two Worlds']],
+        bottom: ['Pole of Spiritual Power:', 'South, Femaleness, Midnight'],
+        arrows: ['Arrows show direction', 'of Movement; Follows Path of Sun', 'in Southern Hemisphere'],
+      },
+      pt: {
+        W: 466, H: 472,
+        top: ['Polo do Poder Físico:', 'Norte, Masculinidade, Meio-dia'],
+        small: ['Pequenos Círculos:', 'Momentos do Sol,', 'Representando as', 'Fases da Vida Humana'],
+        water: ['O Círculo', 'representa a Água'],
+        above: ['Acima da Linha:', 'Mundo dos Humanos'], below: ['Abaixo da Linha:', 'Mundo dos Espíritos'], side: 308,
+        mid: [['Passagem', 'pela Água:'], ['Movimento entre', 'Dois Mundos']],
+        bottom: ['Polo do Poder Espiritual:', 'Sul, Feminilidade, Meia-noite'],
+        arrows: ['As setas mostram a direção', 'do Movimento; Segue o', 'Caminho do Sol no', 'Hemisfério Sul'],
+      },
     };
-    block(cx, 114, ['Pole of Physical Power:', 'North, Maleness, Noon'], 2.2);
-    block(8, 52, ['Small Circles:', 'Moments of the Sun,', 'Representing Phases', 'of Human Life'], 2.4, 'start');
-    block(408, 52, ['Circle', 'represents Water'], 2.6, 'end');
-    block(306, 228, ['Above the Line:', 'World of Humans'], 2.8, 'start', 13);
-    block(306, 266, ['Below the Line:', 'World of Spirits'], 3.0, 'start', 13);
-    const mid = el('g', { class: 'lbl', style: '--d:3.2s', 'font-size': 9.5 }, T);
-    txt(mid, cx - 4, cy + 15, 'Passage', { 'text-anchor': 'end' });
-    txt(mid, cx + 4, cy + 15, 'through Water:', { 'text-anchor': 'start' });
-    txt(mid, cx - 4, cy + 27, 'Movement between', { 'text-anchor': 'end' });
-    txt(mid, cx + 4, cy + 27, 'Two Worlds', { 'text-anchor': 'start' });
-    block(cx, 374, ['Pole of Spiritual Power:', 'South, Femaleness, Midnight'], 3.4);
-    block(112, 420, ['Arrows show direction', 'of Movement; Follows Path of Sun', 'in Southern Hemisphere'], 3.6);
-    // quiet leader lines tying the corner notes to what they describe
-    const lead = el('g', { stroke: C.rust, 'stroke-width': .9, 'stroke-dasharray': '2 3', fill: 'none', opacity: .75 }, svg);
+    B.labeledBox = {};
     const [wx, wy] = P(rw + 3, 52, cx, cy), [lx, ly] = P(rc + 9, 172, cx, cy), [ax, ay] = P(ra + 5, 225, cx, cy);
-    el('path', { d: `M52 102Q64 190 ${f(lx)} ${f(ly)}`, class: 'lbl', style: '--d:2.5s' }, lead);
-    el('path', { d: `M372 72Q360 170 ${f(wx)} ${f(wy)}`, class: 'lbl', style: '--d:2.7s' }, lead);
-    el('path', { d: `M84 406Q90 360 ${f(ax)} ${f(ay)}`, class: 'lbl', style: '--d:3.7s' }, lead);
+    for (const lang of ['en', 'pt']) {
+      const L = LABELS[lang];
+      B.labeledBox[lang] = `0 0 ${L.W} ${L.H}`;
+      const T = el('g', { 'data-l': lang, 'font-family': 'Special Elite, Courier New, monospace', 'font-size': 11, fill: C.ink, 'text-anchor': 'middle' }, svg);
+      const block = (x, y, lines, d, anchor = 'middle', lh = 13.5) => {
+        const g = el('g', { class: 'lbl', style: `--d:${d}s`, 'text-anchor': anchor }, T);
+        lines.forEach((s, i) => txt(g, x, y + i * lh, s));
+        return g;
+      };
+      block(cx, 114, L.top, 2.2);
+      block(8, 52, L.small, 2.4, 'start');
+      block(L.W - 8, 52, L.water, 2.6, 'end');
+      block(L.side, 228, L.above, 2.8, 'start', 13);
+      block(L.side, 266, L.below, 3.0, 'start', 13);
+      const mid = el('g', { class: 'lbl', style: '--d:3.2s', 'font-size': 9.5 }, T);
+      L.mid.forEach(([left, right], i) => {
+        txt(mid, cx - 4, cy + 15 + i * 12, left, { 'text-anchor': 'end' });
+        txt(mid, cx + 4, cy + 15 + i * 12, right, { 'text-anchor': 'start' });
+      });
+      block(cx, 374, L.bottom, 3.4);
+      block(112, 420, L.arrows, 3.6);
+      // quiet leader lines tying the corner notes to what they describe
+      const lead = el('g', { stroke: C.rust, 'stroke-width': .9, 'stroke-dasharray': '2 3', fill: 'none', opacity: .75 }, T);
+      el('path', { d: `M52 104Q64 190 ${f(lx)} ${f(ly)}`, class: 'lbl', style: '--d:2.5s' }, lead);
+      el('path', { d: `M${L.W - 44} 72Q${L.W - 56} 170 ${f(wx)} ${f(wy)}`, class: 'lbl', style: '--d:2.7s' }, lead);
+      el('path', { d: `M84 406Q90 360 ${f(ax)} ${f(ay)}`, class: 'lbl', style: '--d:3.7s' }, lead);
+    }
   }
 
   function buildDikenga() {
@@ -621,7 +658,7 @@
     txt(T, R, 3.5, 'Kala', { 'font-size': 9.5, fill: C.cream });
     txt(T, -R, 3.5, 'Luvemba', { 'font-size': 8.5, fill: C.ink });
     txt(T, 0, R + 3.5, 'Musoni', { 'font-size': 9, fill: C.ink });
-    txt(T, 0, -R - 32, 'Noon', { 'font-size': 11, fill: C.ink, opacity: .75 });
+    txt2(T, 0, -R - 32, 'Noon', 'Meio-dia', { 'font-size': 11, fill: C.ink, opacity: .75 });
   }
 
   function renderBack(now) {
@@ -657,11 +694,15 @@
         });
       },
       // continuous beat position inside a tall step (0..beats), -1 outside it
+      // Continuous beat position in a pinned paragraph, -1 before it arrives.
+      // Beat 0 plays while the card rises into place; beats 1… play while it
+      // is pinned; afterwards it stays complete while the card leaves.
       beat(i) {
         const T = this.tall[i]; if (!T) return -1;
-        const p = (scrollY - T.top) / T.range;
-        if (p < -.05) return -1;   // after the pin it stays complete while the card leaves
-        return clamp(p, 0, 1) * T.beats * .999;
+        const rise = state.vh * .45, y = scrollY;
+        if (y < T.top - rise) return -1;
+        if (y < T.top) return (y - (T.top - rise)) / rise;
+        return 1 + clamp((y - T.top) / T.range) * (T.beats - 1) * .999;
       },
       render,
     };
@@ -669,7 +710,7 @@
     return sc;
   }
 
-  let typedWords = [], typedEl, lastTyped = -1, clauseSteps = [];
+  let typedParas = [], clauseSteps = [];
   function measure() {
     state.vw = innerWidth; state.vh = innerHeight;
     for (const s of scenes) s.measure();
@@ -694,17 +735,53 @@
     }
   }
 
-  // Pinned paragraphs: the highlighter sweeps each phrase in step with the
-  // scroll and the bar fills, so every bit of scrolling visibly does something.
-  function clauses(scene) {
-    for (const { i, spans, bar } of clauseSteps) {
-      const b = scene.beat(i), beats = scene.tall[i] ? scene.tall[i].beats : 4;
-      for (const s of spans) {
-        const c = +s.dataset.c, fill = b < 0 ? 0 : clamp((b - c) / .8);
-        s.style.backgroundSize = f(fill * 100) + '% 100%';
-        s.classList.toggle('done', b >= c + 1);
+  // Pinned paragraphs unfold with the diagram. Every word belongs to the beat
+  // of its phrase (data-b in the markup) and appears when the scroll reaches its
+  // place inside that beat; only the current beat's phrase is highlighted;
+  // scrolling back hides the words again and the diagram reverses with them.
+  function prepareUnfold(p) {
+    const words = [], phrases = [];
+    for (const seg of $$('[data-b]', p)) {
+      const b = +seg.dataset.b;
+      const phrase = seg.classList.contains('c') ? { el: seg, b, words: [], total: 0 } : null;
+      for (const node of [...seg.childNodes]) {
+        if (node.nodeType !== 3) continue;
+        const frag = document.createDocumentFragment();
+        node.textContent.split(/(\s+)/).forEach(part => {
+          if (!part) return;
+          if (phrase) phrase.total += part.length;
+          if (/^\s+$/.test(part)) { frag.append(part); return; }
+          const s = document.createElement('span'); s.className = 'rw'; s.textContent = part; frag.append(s);
+          const w = { el: s, b, len: part.length, on: false };
+          words.push(w); if (phrase) phrase.words.push(w);
+        });
+        node.replaceWith(frag);
       }
-      if (bar) bar.style.transform = `scaleX(${f(b < 0 ? 0 : clamp(b / (beats - .2)))})`;
+      if (phrase) phrases.push(phrase);
+    }
+    // a word's threshold: its beat, plus its place among that beat's words
+    const byBeat = {};
+    for (const w of words) (byBeat[w.b] = byBeat[w.b] || []).push(w);
+    for (const b in byBeat) byBeat[b].forEach((w, j, all) => { w.th = +b + (j + 1) / all.length * .72; });
+    return { words, phrases };
+  }
+  function unfold(scene) {
+    for (const { i, paras, bar } of clauseSteps) {
+      const B = scene.beat(i), beats = scene.tall[i] ? scene.tall[i].beats : 4;
+      const cur = B < 0 ? -1 : Math.floor(B);
+      for (const { words, phrases } of paras) {
+        for (const w of words) {
+          const on = B >= w.th;
+          if (w.on !== on) { w.on = on; w.el.classList.toggle('on', on); }
+        }
+        for (const ph of phrases) {
+          let shown = 0;
+          for (const w of ph.words) if (w.on) shown += w.len + 1;
+          ph.el.style.backgroundSize = f(Math.min(100, shown / ph.total * 100)) + '% 100%';
+          ph.el.classList.toggle('cur', ph.b === cur);
+        }
+      }
+      if (bar) bar.style.transform = `scaleX(${f(B < 0 ? 0 : clamp(B / (beats - .3)))})`;
     }
   }
 
@@ -712,18 +789,19 @@
   // time the page runs out: on a wide screen the paragraph never climbs far up
   // the screen before the page ends, so the end point is capped at the bottom.
   function typed() {
-    if (!typedEl) return;
-    const r = typedEl.getBoundingClientRect();
-    if (r.top > state.vh || r.bottom < 0) return;
-    const top = r.top + scrollY;
-    const start = top - state.vh * .92;
-    const maxScroll = document.documentElement.scrollHeight - state.vh;
-    const end = Math.min(top + r.height - state.vh * .75, maxScroll - 2);
-    const p = end > start ? clamp((scrollY - start) / (end - start)) : 1;
-    const n = Math.ceil(p * typedWords.length);
-    if (n === lastTyped) return;
-    lastTyped = n;
-    typedWords.forEach((w, i) => w.classList.toggle('on', i < n));
+    for (const t of typedParas) {
+      const r = t.el.getBoundingClientRect();
+      if (!r.height || r.top > state.vh || r.bottom < 0) continue;   // hidden language or off screen
+      const top = r.top + scrollY;
+      const start = top - state.vh * .92;
+      const maxScroll = document.documentElement.scrollHeight - state.vh;
+      const end = Math.min(top + r.height - state.vh * .75, maxScroll - 2);
+      const p = end > start ? clamp((scrollY - start) / (end - start)) : 1;
+      const n = Math.ceil(p * t.words.length);
+      if (n === t.last) continue;
+      t.last = n;
+      t.words.forEach((w, i) => w.classList.toggle('on', i < n));
+    }
   }
 
   const dialSun = $('#dial-sun');
@@ -738,7 +816,7 @@
   function frame(now) {
     raf = 0;
     for (const s of scenes) if (s.visible) s.render(stepT(s.anchors, scrollY), now, s);
-    if (ppf.visible) clauses(ppf);
+    if (ppf.visible) unfold(ppf);
     if (backVisible) renderBack(now);
     fadeCards();
     typed();
@@ -754,6 +832,7 @@
     html.lang = l === 'pt' ? 'pt-BR' : 'en';
     $$('[data-set-lang]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.setLang === l)));
     try { localStorage.setItem('pdc-lang', l); } catch (e) { /* private mode */ }
+    if (B.labeledBox) $('#fig-labeled').setAttribute('viewBox', B.labeledBox[l]);
     measure(); kick();
   }
 
@@ -779,10 +858,9 @@
     measure(); kick();
     if (open) anatomy.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' });
   });
-  clauseSteps = [1, 2].map(i => ({ i, spans: $$('.c', ppf.steps[i]), bar: $('.pin-bar i', ppf.steps[i]) }));
+  clauseSteps = [1, 2].map(i => ({ i, paras: $$('.unfold', ppf.steps[i]).map(prepareUnfold), bar: $('.pin-bar i', ppf.steps[i]) }));
 
-  typedEl = $('#typed');
-  (function wrapWords(node) {
+  function wrapWords(node) {
     for (const child of [...node.childNodes]) {
       if (child.nodeType === 3) {
         const frag = document.createDocumentFragment();
@@ -796,8 +874,9 @@
         child.classList.add('tw');
       }
     }
-  })(typedEl);
-  typedWords = $$('.tw', typedEl);
+    return node;
+  }
+  typedParas = $$('.typed').map(el => ({ el: wrapWords(el), words: $$('.tw', el), last: -1 }));
 
   let lang = 'en';
   try { lang = localStorage.getItem('pdc-lang') || ((navigator.language || '').toLowerCase().startsWith('pt') ? 'pt' : 'en'); } catch (e) { /* ignore */ }

@@ -164,11 +164,19 @@ h2.brush {
   -webkit-box-decoration-break: clone; box-decoration-break: clone;
 }
 .w.on { background-size: 100% 100%; font-weight: 600; }
-/* In the pinned paragraphs the highlighter follows your thumb: it sweeps across
-   each phrase in step with the scroll (one strip across line breaks), and the
-   phrases already read keep a softer mark — visible proof the scroll is working. */
-.c { -webkit-box-decoration-break: slice; box-decoration-break: slice; }
-.c.done { --hl: rgba(255,183,0,.32); }
+/* Pinned paragraphs unfold word by word with the scroll. The words still to
+   come keep their space (invisible), so the card never jumps; only the phrase
+   the diagram is showing right now is highlighted, growing as its words appear
+   (one strip across line breaks). */
+@property --hl { syntax: '<color>'; inherits: false; initial-value: rgba(255,183,0,0); }
+.c {
+  --hl: rgba(255,183,0,0);
+  transition: --hl .35s ease;
+  -webkit-box-decoration-break: slice; box-decoration-break: slice;
+}
+.c.cur { --hl: rgba(255,183,0,.62); }
+.rw { opacity: 0; transition: opacity .22s ease; }
+.rw.on { opacity: 1; }
 
 /* progress + "keep scrolling" under a pinned paragraph */
 .pin-foot { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
@@ -253,6 +261,7 @@ h2.brush {
 .back-title .l1 { display: block; font-size: clamp(13px, 4.2vw, 34px); color: var(--ink); white-space: nowrap; }
 .back-title .l1 em { font-family: var(--f-brush); font-style: normal; font-weight: 400; font-size: 1.12em; display: inline-block; transform: rotate(-4deg); }
 .back-title .l2 { display: block; font-size: clamp(19px, 6.3vw, 60px); color: #7C2A1C; margin-top: .05em; white-space: nowrap; }
+html[data-lang="pt"] .back-title .l2 { font-size: clamp(14px, 4.55vw, 52px); }
 
 .figs {
   display: grid; grid-template-columns: 1fr 1fr; gap: 18px 14px;
@@ -309,7 +318,7 @@ h2.brush {
 .typed .tw { opacity: .16; transition: opacity .5s ease; }
 .typed .tw.on { opacity: 1; }
 .pt4 { box-shadow: inset 0 -.38em 0 -.18em var(--c); padding: 0 .1em; }
-.pt4:nth-child(3) { box-shadow: inset 0 -.38em 0 -.18em var(--c), 0 1px 0 rgba(27,20,18,.35); }
+.pt4.pale { box-shadow: inset 0 -.38em 0 -.18em var(--c), 0 1px 0 rgba(27,20,18,.35); }
 
 .foot {
   background: var(--kala); color: var(--paper-light);

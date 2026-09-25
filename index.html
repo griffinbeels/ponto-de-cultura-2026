@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Knewave&family=Permanent+Marker&family=Special+Elite&family=Lexend+Deca:wght@700;800&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 
@@ -118,17 +118,19 @@
         <p class="sub"><span data-l="en">Ancestry · Transformation · Continuity</span><span data-l="pt">Ancestralidade · Transformação · Continuidade</span></p>
       </header>
     </div>
-    <div class="step tall" data-step="1" data-beats="4">
+    <!-- Each piece of text carries the diagram beat it belongs to (data-b);
+         words unfold one by one with the scroll, beat 0 while the card rises. -->
+    <div class="step tall" data-step="1" data-beats="5" style="--beats:4">
       <article class="card page">
-        <p data-l="en">We chose the Kongo Cosmogram as the symbol of this year’s Ponto de Cultura because it expresses a fundamental idea: <span class="c" data-c="0">to know where we are going</span>, we must <span class="c" data-c="1">recognize where we came from</span>, <span class="c" data-c="2">understand where we are today</span>, and <span class="c" data-c="3">prepare what we will leave for those who come after us</span>.</p>
-        <p data-l="pt">Escolhemos o Cosmograma Kongo como símbolo do Ponto de Cultura deste ano porque ele expressa uma ideia fundamental: <span class="c" data-c="0">para saber para onde vamos</span>, precisamos <span class="c" data-c="1">reconhecer de onde viemos</span>, <span class="c" data-c="2">compreender onde estamos</span> e <span class="c" data-c="3">preparar aquilo que deixaremos para quem virá depois de nós</span>.</p>
+        <p data-l="en" class="unfold"><span data-b="0">We chose the Kongo Cosmogram as the symbol of this year’s Ponto de Cultura because it expresses a fundamental idea:</span> <span class="c" data-b="1">to know where we are going</span><span data-b="2">, we must</span> <span class="c" data-b="2">recognize where we came from</span><span data-b="3">,</span> <span class="c" data-b="3">understand where we are today</span><span data-b="4">, and</span> <span class="c" data-b="4">prepare what we will leave for those who come after us</span><span data-b="4">.</span></p>
+        <p data-l="pt" class="unfold"><span data-b="0">Escolhemos o Cosmograma Kongo como símbolo do Ponto de Cultura deste ano porque ele expressa uma ideia fundamental:</span> <span class="c" data-b="1">para saber para onde vamos</span><span data-b="2">, precisamos</span> <span class="c" data-b="2">reconhecer de onde viemos</span><span data-b="3">,</span> <span class="c" data-b="3">compreender onde estamos</span> <span data-b="4">e</span> <span class="c" data-b="4">preparar aquilo que deixaremos para quem virá depois de nós</span><span data-b="4">.</span></p>
         <div class="pin-foot" aria-hidden="true"><span class="pin-bar"><i></i></span><span class="pin-cue"><span data-l="en">Keep scrolling</span><span data-l="pt">Continue rolando</span><svg viewBox="0 0 20 20"><path d="M5 5l5 5 5-5M5 11l5 5 5-5"/></svg></span></div>
       </article>
     </div>
-    <div class="step tall" data-step="2" data-beats="4">
+    <div class="step tall" data-step="2" data-beats="4" style="--beats:3">
       <article class="card page">
-        <p data-l="en"><span class="c" data-c="0">The same is true of Capoeira.</span> <span class="c" data-c="1">We receive a legacy from our ancestors and mestres</span>, <span class="c" data-c="2">transform that knowledge through our own experiences</span>, and <span class="c" data-c="3">carry the responsibility of passing it on to future generations</span>.</p>
-        <p data-l="pt"><span class="c" data-c="0">Assim também acontece na Capoeira.</span> <span class="c" data-c="1">Recebemos um legado de nossos ancestrais e mestres</span>, <span class="c" data-c="2">transformamos esse conhecimento através de nossas experiências</span> e <span class="c" data-c="3">temos a responsabilidade de transmiti-lo às próximas gerações</span>.</p>
+        <p data-l="en" class="unfold"><span class="c" data-b="0">The same is true of Capoeira.</span> <span class="c" data-b="1">We receive a legacy from our ancestors and mestres</span><span data-b="2">,</span> <span class="c" data-b="2">transform that knowledge through our own experiences</span><span data-b="3">, and</span> <span class="c" data-b="3">carry the responsibility of passing it on to future generations</span><span data-b="3">.</span></p>
+        <p data-l="pt" class="unfold"><span class="c" data-b="0">Assim também acontece na Capoeira.</span> <span class="c" data-b="1">Recebemos um legado de nossos ancestrais e mestres</span><span data-b="2">,</span> <span class="c" data-b="2">transformamos esse conhecimento através de nossas experiências</span> <span data-b="3">e</span> <span class="c" data-b="3">temos a responsabilidade de transmiti-lo às próximas gerações</span><span data-b="3">.</span></p>
         <div class="pin-foot" aria-hidden="true"><span class="pin-bar"><i></i></span><span class="pin-cue"><span data-l="en">Keep scrolling</span><span data-l="pt">Continue rolando</span><svg viewBox="0 0 20 20"><path d="M5 5l5 5 5-5M5 11l5 5 5-5"/></svg></span></div>
       </article>
     </div>
@@ -144,8 +146,8 @@
 <!-- ═════════════ BACK PAGE ═════════════ -->
 <section id="back" class="back">
   <h2 class="back-title reveal">
-    <span class="l1">PONTO DE CULTURA <em>2026</em> THEME:</span>
-    <span class="l2">PAST - PRESENT - FUTURE</span>
+    <span class="l1">PONTO DE CULTURA <em>2026</em> <span data-l="en">THEME:</span><span data-l="pt">TEMA:</span></span>
+    <span class="l2"><span data-l="en">PAST - PRESENT - FUTURE</span><span data-l="pt">PASSADO - PRESENTE - FUTURO</span></span>
   </h2>
 
   <div class="figs">
@@ -164,12 +166,12 @@
         <svg class="diagram" id="cosmo-steps" viewBox="-210 -210 420 420"></svg>
       </div>
       <div class="steps">
-        <div class="step" data-step="0"><aside class="card note"><p>Circle represents Water</p></aside></div>
-        <div class="step" data-step="1"><aside class="card note"><p>Above the Line: World of Humans</p><p>Below the Line: World of Spirits</p></aside></div>
-        <div class="step" data-step="2"><aside class="card note"><p>Passage through Water: Movement between Two Worlds</p></aside></div>
-        <div class="step" data-step="3"><aside class="card note"><p>Small Circles: Moments of the Sun, Representing Phases of Human Life</p></aside></div>
-        <div class="step" data-step="4"><aside class="card note"><p>Pole of Physical Power: North, Maleness, Noon</p><p>Pole of Spiritual Power: South, Femaleness, Midnight</p></aside></div>
-        <div class="step" data-step="5"><aside class="card note"><p>Arrows show direction of Movement; Follows Path of Sun in Southern Hemisphere</p></aside></div>
+        <div class="step" data-step="0"><aside class="card note"><p data-l="en">Circle represents Water</p><p data-l="pt">O Círculo representa a Água</p></aside></div>
+        <div class="step" data-step="1"><aside class="card note"><p data-l="en">Above the Line: World of Humans</p><p data-l="en">Below the Line: World of Spirits</p><p data-l="pt">Acima da Linha: Mundo dos Humanos</p><p data-l="pt">Abaixo da Linha: Mundo dos Espíritos</p></aside></div>
+        <div class="step" data-step="2"><aside class="card note"><p data-l="en">Passage through Water: Movement between Two Worlds</p><p data-l="pt">Passagem pela Água: Movimento entre Dois Mundos</p></aside></div>
+        <div class="step" data-step="3"><aside class="card note"><p data-l="en">Small Circles: Moments of the Sun, Representing Phases of Human Life</p><p data-l="pt">Pequenos Círculos: Momentos do Sol, Representando as Fases da Vida Humana</p></aside></div>
+        <div class="step" data-step="4"><aside class="card note"><p data-l="en">Pole of Physical Power: North, Maleness, Noon</p><p data-l="en">Pole of Spiritual Power: South, Femaleness, Midnight</p><p data-l="pt">Polo do Poder Físico: Norte, Masculinidade, Meio-dia</p><p data-l="pt">Polo do Poder Espiritual: Sul, Feminilidade, Meia-noite</p></aside></div>
+        <div class="step" data-step="5"><aside class="card note"><p data-l="en">Arrows show direction of Movement; Follows Path of Sun in Southern Hemisphere</p><p data-l="pt">As setas mostram a direção do Movimento; Segue o Caminho do Sol no Hemisfério Sul</p></aside></div>
         <div class="step step-close" data-step="6"></div>
       </div>
     </section>
@@ -179,7 +181,8 @@
     <figure class="fig fig-dikenga reveal"><svg id="fig-dikenga" viewBox="-230 -230 460 460" role="img" aria-label="NSEKE and MPEMBA diagram of the Dikenga"></svg></figure>
   </div>
 
-  <p class="typed" id="typed">The BAKONGO COSMOGRAM formed one of the most important philosophical symbols in Central African thought. Known as the Kongo Cosmogram or Dikenga, It represents the cycle of life. The four points mark the passage of the sun and the stages of existence, <span class="pt4" style="--c:var(--kala)">birth</span>, <span class="pt4" style="--c:var(--tukula)">life</span>, <span class="pt4" style="--c:var(--luvemba)">death</span>, and <span class="pt4" style="--c:var(--musoni)">spiritual return</span>. For centuries, the symbol guided the Bakongo people's ideas about time, knowledge, and human continuity. It shows how philosophy was expressed not only through writing, but through visual cosmology.</p>
+  <p class="typed" lang="pt-BR" data-l="pt">O COSMOGRAMA BAKONGO constituiu um dos símbolos filosóficos mais importantes do pensamento da África Central. Conhecido como Cosmograma Kongo ou Dikenga, ele representa o ciclo da vida. Os quatro pontos marcam a passagem do sol e as etapas da existência: <span class="pt4" style="--c:var(--kala)">nascimento</span>, <span class="pt4" style="--c:var(--tukula)">vida</span>, <span class="pt4 pale" style="--c:var(--luvemba)">morte</span> e <span class="pt4" style="--c:var(--musoni)">retorno espiritual</span>. Durante séculos, o símbolo orientou as ideias do povo Bakongo sobre o tempo, o conhecimento e a continuidade humana. Ele mostra como a filosofia era expressa não apenas por meio da escrita, mas também por meio da cosmologia visual.</p>
+  <p class="typed" data-l="en">The BAKONGO COSMOGRAM formed one of the most important philosophical symbols in Central African thought. Known as the Kongo Cosmogram or Dikenga, It represents the cycle of life. The four points mark the passage of the sun and the stages of existence, <span class="pt4" style="--c:var(--kala)">birth</span>, <span class="pt4" style="--c:var(--tukula)">life</span>, <span class="pt4 pale" style="--c:var(--luvemba)">death</span>, and <span class="pt4" style="--c:var(--musoni)">spiritual return</span>. For centuries, the symbol guided the Bakongo people's ideas about time, knowledge, and human continuity. It shows how philosophy was expressed not only through writing, but through visual cosmology.</p>
 </section>
 
 <footer class="foot">
@@ -189,6 +192,6 @@
 </main>
 
 <!-- bump ?v= with each release: GitHub Pages lets browsers cache these for 10 minutes -->
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
