@@ -79,8 +79,9 @@
   function layout(mode) {
     const { vw, vh } = state, desk = vw >= 860;
     if (mode === 'cover') {
-      const S = desk ? Math.min(vh * .84, vw * .6) : Math.min(vw * 1.0, vh * .62);
-      return { S, cx: vw / 2, cy: desk ? vh * .5 : vh * .46 };
+      // leave room under the emblem for the three credit lines
+      const S = desk ? Math.min(vh * .72, vw * .6) : Math.min(vw * 1.0, vh * .62);
+      return { S, cx: vw / 2, cy: desk ? vh * .45 : vh * .46 };
     }
     if (desk) { const S = Math.min(vh * .9, vw * .5); return { S, cx: vw * .68, cy: vh * .5, read: vh * .36 }; }
     // the Past·Present·Future ring is simpler, so it can be smaller and leave room for longer paragraphs
@@ -197,16 +198,22 @@
     // labels from the NSEKE / MPEMBA diagram, dark and light copies
     const lab = el('g', { 'font-family': 'Poppins, sans-serif', 'text-anchor': 'middle' }, svg);
     J.labels = lab;
-    const labelSet = (parent, fill) => {
-      txt(parent, 0, -44, 'NSEKE', { 'font-size': 24, 'font-weight': 500, 'letter-spacing': 2.5, fill });
-      txt(parent, 0, 66, 'MPEMBA', { 'font-size': 24, 'font-weight': 500, 'letter-spacing': 2.5, fill });
-      txt(parent, 66, -5, 'Kalunga', { 'font-size': 10, fill });
-      txt(parent, -66, 14, 'Kalunga', { 'font-size': 10, fill });
+    const labelSet = (parent, fill, half) => {
+      if (half === 'top') {
+        txt(parent, 0, -44, 'NSEKE', { 'font-size': 24, 'font-weight': 500, 'letter-spacing': 2.5, fill });
+        txt(parent, 66, -5, 'Kalunga', { 'font-size': 10, fill });
+      } else {
+        txt(parent, 0, 66, 'MPEMBA', { 'font-size': 24, 'font-weight': 500, 'letter-spacing': 2.5, fill });
+        txt(parent, -66, 14, 'Kalunga', { 'font-size': 10, fill });
+      }
     };
-    J.worlds = el('g', { opacity: 0 }, lab);
-    labelSet(J.worlds, C.ink);
-    const light = el('g', { 'clip-path': `url(#${id}Dark)` }, J.worlds);
-    labelSet(light, C.cream);
+    // above the line and below it arrive separately ("Above the Line…" · "Below the Line…")
+    J.worldTop = el('g', { opacity: 0 }, lab);
+    J.worldBot = el('g', { opacity: 0 }, lab);
+    const light = el('g', { 'clip-path': `url(#${id}Dark)` }, J.worldTop);
+    labelSet(J.worldTop, C.ink, 'top');
+    labelSet(light, C.cream, 'top');
+    labelSet(J.worldBot, C.ink, 'bottom');
 
     J.names = el('g', { opacity: 0 }, lab);
     J.nameEls = MOMENTS.map(m => {
@@ -239,7 +246,7 @@
 
     J.ponto = txt(svg, 0, 12, 'PONTO DE CULTURA', {
       'text-anchor': 'middle', 'font-family': 'Permanent Marker, cursive', 'font-size': 37,
-      fill: C.brush, stroke: C.ink, 'stroke-width': 1.5, 'paint-order': 'stroke', 'stroke-linejoin': 'round',
+      fill: C.brush, stroke: C.ink, 'stroke-width': 3.4, 'paint-order': 'stroke', 'stroke-linejoin': 'round',   // a firm black outline keeps it legible on the feathers
       textLength: 340, lengthAdjust: 'spacingAndGlyphs', opacity: 0,
     });
     return J;
@@ -271,7 +278,7 @@
   }
   // Timeline position → where the sun is during the four moments. It travels
   // while each moment's words unfold (the holds live in the scroll plan).
-  const SUN_KEYS = [[8.4, -24], [9, 0], [10, 90], [11, 180], [12, 270], [13, 360]];
+  const SUN_KEYS = [[8.8, -24], [9, 0], [10, 90], [11, 180], [12, 270], [13, 360]];
   function thetaAt(t) {
     if (t <= SUN_KEYS[0][0]) return SUN_KEYS[0][1];
     for (let i = 0; i < SUN_KEYS.length - 1; i++) {
@@ -296,24 +303,28 @@
     const k = opt.layout != null ? opt.layout : ramp(t, .05, .9);
     place(J.svg, { S: lerp(cov.S, dia.S, k), cx: lerp(cov.cx, dia.cx, k), cy: lerp(cov.cy, dia.cy, k) });
 
-    // ── emblem → cosmogram ──
-    const m = ramp(t, .1, .9);
+    // ── emblem → cosmogram, spread across the whole cover scroll (t 0 → .92) ──
+    // PONTO DE CULTURA lifts away, the ring lettering fades, ticks and spokes go,
+    // the feathers fold in one by one, the inner ring goes, the outer ring
+    // tightens into the water circle and the cross reaches the centre — done
+    // exactly as The Kongo Cosmogram box is ready.
+    const m = ramp(t, .35, .88);
     const ringR = lerp(135, 100, m), cR = lerp(182, 150, m), cS = lerp(17, 15, m);
-    const decoOut = ramp(t, .04, .55);
+    const decoOut = ramp(t, .15, .8);
     const spin = RM ? 0 : sec * 2.2;
     J.feathers.forEach((g, i) => {
-      const s = ramp(intro, .42 + i * .022, .6 + i * .022) * (1 - ramp(t, .04 + i * .012, .5 + i * .012));
-      g.setAttribute('transform', `rotate(${f(i * 30 + spin + 50 * decoOut)}) scale(${f(Math.max(s, .001))})`);
+      const s = ramp(intro, .42 + i * .022, .6 + i * .022) * (1 - ramp(t, .18 + i * .03, .42 + i * .03));
+      g.setAttribute('transform', `rotate(${f(i * 30 + spin + 60 * decoOut)}) scale(${f(Math.max(s, .001))})`);
       g.setAttribute('opacity', s > .002 ? 1 : 0);
     });
-    J.spokes.setAttribute('opacity', f(ramp(intro, .34, .62) * (1 - ramp(t, .03, .4))));
-    J.ticks.setAttribute('opacity', f(ramp(intro, .38, .66) * (1 - ramp(t, .03, .4))));
-    set(J.innerRing, { 'stroke-dashoffset': f(1 - ramp(intro, .26, .56)), opacity: f(1 - ramp(t, .05, .45)) });
-    J.ringText.setAttribute('opacity', f(ramp(intro, .55, .82) * (1 - ramp(t, .02, .3))));
-    const stamp = ramp(intro, .74, .94);
+    J.spokes.setAttribute('opacity', f(ramp(intro, .34, .62) * (1 - ramp(t, .12, .45))));
+    J.ticks.setAttribute('opacity', f(ramp(intro, .38, .66) * (1 - ramp(t, .1, .4))));
+    set(J.innerRing, { 'stroke-dashoffset': f(1 - ramp(intro, .26, .56)), opacity: f(1 - ramp(t, .3, .6)) });
+    J.ringText.setAttribute('opacity', f(ramp(intro, .55, .82) * (1 - ramp(t, .05, .32))));
+    const stamp = ramp(intro, .74, .94), lift = ramp(t, 0, .3);
     set(J.ponto, {
-      opacity: f(stamp * (1 - ramp(t, .02, .28))),
-      transform: `translate(0 ${f(-40 * ramp(t, 0, .3))}) scale(${f(1 + .28 * (1 - stamp))})`,
+      opacity: f(stamp * (1 - lift)),
+      transform: `translate(0 ${f(-46 * lift)}) scale(${f((1 + .28 * (1 - stamp)) * (1 - .12 * lift))})`,
     });
 
     // water circle (the emblem's ring becomes "Circle represents Water")
@@ -329,14 +340,16 @@
     });
 
     // the two worlds, above and below the line
-    const worlds = A * bump(t, 2.45, 2.95, 3.45, 3.9);
-    const worldsSoft = A * ramp(t, 2.45, 2.95) * (1 - ramp(t, 7.6, 8.3));
-    J.topHalf.setAttribute('opacity', f(.1 * worldsSoft + .14 * worlds));
-    J.botHalf.setAttribute('opacity', f(.1 * worldsSoft + .14 * worlds));
-    J.worlds.setAttribute('opacity', f(ramp(t, 2.5, 2.95)));
+    // "Above the Line: World of Humans" (to 2.7) · "Below the Line: World of Spirits" (to 3)
+    const later = 1 - ramp(t, 7.6, 8.3);
+    const wTop = A * bump(t, 2.45, 2.7, 3.45, 3.9), wBot = A * bump(t, 2.75, 3, 3.45, 3.9);
+    J.topHalf.setAttribute('opacity', f(.1 * A * ramp(t, 2.45, 2.7) * later + .14 * wTop));
+    J.botHalf.setAttribute('opacity', f(.1 * A * ramp(t, 2.75, 3) * later + .14 * wBot));
+    J.worldTop.setAttribute('opacity', f(ramp(t, 2.5, 2.7)));
+    J.worldBot.setAttribute('opacity', f(ramp(t, 2.8, 3)));
 
     // cross: the connectors grow in from the circles, then reach the centre
-    const armIn = ramp(intro, .06, .3), armCenter = ramp(t, .35, .95);
+    const armIn = ramp(intro, .06, .3), armCenter = ramp(t, .5, .9);
     J.arms.forEach((ln, i) => {
       const a = MOMENTS[i].a, rOut = cR - cS - 1, rIn = lerp(ringR, 0, armCenter);
       const r0 = lerp(rOut, rIn, armIn);
@@ -352,14 +365,15 @@
     set(J.passRipple, { rx: f(6 + 58 * rph), ry: f(2 + 12 * rph), opacity: f(pass * (1 - rph) * .9) });
 
     // poles
-    const poles = A * bump(t, 5.45, 5.95, 6.45, 6.9);
-    J.poleN.setAttribute('opacity', f(poles * .85));
-    J.poleS.setAttribute('opacity', f(poles * .85));
+    // "Pole of Physical Power: North…" (to 5.7) · "Pole of Spiritual Power: South…" (to 6)
+    const poleN = A * bump(t, 5.45, 5.7, 6.45, 6.9), poleS = A * bump(t, 5.75, 6, 6.45, 6.9);
+    J.poleN.setAttribute('opacity', f(poleN * .85));
+    J.poleS.setAttribute('opacity', f(poleS * .85));
 
     // arrows: drawn one after another, in the sun's direction
     const arrowsOut = ramp(t, 7.7, 8.3);
     J.arrows.forEach((ar, i) => {
-      const d = A * ramp(t, 6.45 + i * .09, 6.8 + i * .09);
+      const d = A * ramp(t, 6.45 + i * .06, 6.65 + i * .06);    // drawn by 6.83: "Arrows show direction…"
       ar.arc.setAttribute('stroke-dashoffset', f(1 - d));
       ar.head.setAttribute('opacity', f(ramp(d, .85, 1)));
       ar.g.setAttribute('opacity', f(1 - arrowsOut));
@@ -367,7 +381,9 @@
 
     // ── the sun ──
     const loopA = (sec * 40) % 360;
-    const oIntro = (opt.introOrbit ? 1 : 0) * bump(t, .55, .95, 1.45, 1.85), oArrows = A * bump(t, 6.6, 7, 7.45, 7.78);
+    // "It represents existence as a continuous cycle" sets the sun circling (to 1.1);
+    // "Follows Path of Sun…" sends it along the arrows (to 7)
+    const oIntro = (opt.introOrbit ? 1 : 0) * bump(t, .95, 1.1, 1.45, 1.85), oArrows = A * bump(t, 6.86, 7, 7.45, 7.78);
     const journey = ramp(t, 7.8, 8.35);
     const theta = t >= 7.8 ? thetaAt(t) : loopA;
     const sunO = t >= 7.8 ? journey : Math.max(oIntro, oArrows);
@@ -377,7 +393,7 @@
     J.rays.setAttribute('transform', `rotate(${f(RM ? 0 : sec * 30)})`);
 
     // the five words of the cycle follow the sun around
-    const wordsOn = oIntro > .35;
+    const wordsOn = oIntro > .35 && t >= 1.18;           // once "of birth, growth, …" is on the page
     for (const w of opt.words || []) w.classList.toggle('on', wordsOn && angDist(loopA, +w.dataset.a) < 26);
 
     // ── the four moments: the sun paints each quarter as it passes ──
@@ -396,9 +412,10 @@
     J.orbit.setAttribute('opacity', f(ramp(t, 7.75, 8.35)));
     J.disk.setAttribute('opacity', f(ramp(t, 7.6, 8.3)));
     J.fog.setAttribute('opacity', f(1 - ramp(t, 7.6, 8.3)));   // the cream disc takes over once the sky darkens
-    J.names.setAttribute('opacity', f(ramp(t, 8.0, 8.6)));
-
-    const moments = ramp(t, 8.6, 9);
+    // "Its four stages symbolize this journey:" lights the four moments in order (8.4 → 8.8)
+    const seq = i => ramp(t, 8.4 + i * .09, 8.49 + i * .09);
+    const seqGlow = i => bump(t, 8.4 + i * .09, 8.46 + i * .09, 8.52 + i * .09, 8.62 + i * .09);
+    const moments = ramp(t, 8.8, 9);
     J.circles.forEach((c, i) => {
       const [x, y] = P(cR, c.a);
       const pop = backOut(ramp(intro, i * .05, .2 + i * .05));
@@ -406,25 +423,32 @@
       const small = A * bump(t, 4.45, 4.95, 5.45, 5.9);
       const ph = ((sec * .8) - i * .25) % 1, beat = Math.exp(-((ph < 0 ? ph + 1 : ph) * 7));
       // the circle nearest the sun glows during the four moments
-      const near = t >= 8.6 ? clamp(1 - angDist(theta, c.a) / 40) : 0;
-      const pole = (c.a === 90 || c.a === 270) ? poles : 0;
-      const sc = pop * (cS / 17) * (1 + .35 * small * beat + .22 * near * moments + .25 * pole);
+      const near = t >= 8.8 ? clamp(1 - angDist(theta, c.a) / 40) : 0;
+      const pole = c.a === 90 ? poleN : c.a === 270 ? poleS : 0;
+      const lit = seqGlow(i);
+      const sc = pop * (cS / 17) * (1 + .35 * small * beat + .22 * near * moments + .25 * pole + .3 * lit);
       c.g.setAttribute('transform', `translate(${f(x)} ${f(y)}) scale(${f(Math.max(sc, .001))})`);
       c.dot.setAttribute('opacity', f(small * beat));
-      c.glow.setAttribute('opacity', f(Math.max(near * moments, pole)));
-      J.nameEls[i].setAttribute('opacity', f(t >= 8.6 ? .45 + .55 * near : 1));
+      c.glow.setAttribute('opacity', f(Math.max(near * moments, pole, lit)));
+      J.nameEls[i].setAttribute('opacity', f(t >= 8.8 ? .45 + .55 * near : seq(i)));
     });
+
+    // hand-off to the next section: the diagram and its sky dissolve into the
+    // page colour Past · Present · Future starts on, so the seam disappears
+    const handoff = ramp(t, 13.05, 13.9);
+    J.svg.style.opacity = f(1 - handoff);
 
     // sky (main story only)
     if (!opt.sky) return;
     const skyMix = ramp(t, 7.6, 8.4);
     const [top, bottom] = skyAt(thJ);
+    const toPage = c => mix2(C.page, c, 1 - handoff);
     opt.sky.style.background = skyMix > .001
-      ? `linear-gradient(180deg, ${mix2(C.paper, top, skyMix)}, ${mix2(C.paper, bottom, skyMix)})`
+      ? `linear-gradient(180deg, ${toPage(mix2(C.paper, top, skyMix))}, ${toPage(mix2(C.paper, bottom, skyMix))})`
       : '';
     const night = thJ < 20 ? 1 - ramp(thJ, -30, 18) : ramp(thJ, 168, 215) * (1 - ramp(thJ, 325, 368));
-    opt.stars.style.opacity = f(night * skyMix);
-    themeColor.setAttribute('content', skyMix > .5 ? '#1B1412' : '#EBA98C');
+    opt.stars.style.opacity = f(night * skyMix * (1 - handoff));
+    themeColor.setAttribute('content', skyMix > .5 && handoff < .5 ? '#1B1412' : handoff >= .5 ? '#F6F2EC' : '#EBA98C');
   }
   const themeColor = document.querySelector('meta[name="theme-color"]');
   function mix2(a, rgb, t) {
@@ -486,36 +510,40 @@
     Q.future.setAttribute('opacity', f(ramp(t, -.7, -.45)));
     Q.sun.setAttribute('opacity', f(ramp(t, -.8, -.5)));
 
-    // beats inside the two paragraphs
-    // Beats follow the words (see index.html data-b):
-    //   paragraph 1 — 0 "We chose … idea:" · 1 "where we are going" · 2 past · 3 present · 4 future
-    //   paragraph 2 — 0 "The same is true of Capoeira." · 1 receive · 2 transform · 3 pass on
-    const b1 = scene.beat(1), b2 = scene.beat(2);          // continuous, or -1 before arriving
-    const inP2 = b2 >= 0 && t < 3, inP1 = b1 >= 0 && !inP2 && t < 3;
-    const focus = (b, i) => bump(b, i - .15, i + .1, i + .9, i + 1.15);
+    // First paragraph, one beat per chunk (t = 1 + chunk × .15):
+    //   "We chose …" · "because … idea:" — all three lit; "to know where we are going," —
+    //   the arrows ahead; "recognize where we came from," — PAST; "understand where we
+    //   are today," — PRESENT; "prepare what we will leave …" — FUTURE.
+    const kk = (t - 1) / .15;
+    const inP1 = t > .97 && t < 1.88;
+    const focus = (b, i) => bump(b, i - .5, i, i + .5, i + 1);
     const dim = x => .3 + .7 * x;
     let fPast = 1, fPres = 1, fFut = 1, fDir = 0;
     if (inP1) {
-      const lead = 1 - ramp(b1, .85, 1.15);   // while the opening words type in, all three stay lit
-      fDir = focus(b1, 1);
-      fPast = lerp(dim(focus(b1, 2)), 1, lead);
-      fPres = lerp(dim(focus(b1, 3)), 1, lead);
-      fFut = lerp(dim(Math.max(focus(b1, 4), fDir * .6)), 1, lead);
+      const lead = 1 - ramp(kk, 1.5, 2);   // the two opening chunks keep all three lit
+      fDir = focus(kk, 2);
+      fPast = lerp(dim(focus(kk, 3)), 1, lead);
+      fPres = lerp(dim(focus(kk, 4)), 1, lead);
+      fFut = lerp(dim(Math.max(focus(kk, 5), fDir * .6)), 1, lead);
     }
     // each label lands with its word: Ancestry, Transformation, Continuity
-    Q.lPast.setAttribute('opacity', f(ramp(t, -.3, -.243) * fPast));
-    Q.lPresent.setAttribute('opacity', f(ramp(t, -.09, -.03) * fPres));
-    Q.lFuture.setAttribute('opacity', f(ramp(t, .125, .184) * fFut));
-    Q.past.setAttribute('stroke-width', f(6 + (inP1 ? 3 * focus(b1, 2) : 0)));
-    Q.future.setAttribute('stroke-width', f(5 + (inP1 ? 3 * focus(b1, 4) : 0)));
+    Q.lPast.setAttribute('opacity', f(ramp(t, -.33, -.24) * fPast));
+    Q.lPresent.setAttribute('opacity', f(ramp(t, -.12, -.03) * fPres));
+    Q.lFuture.setAttribute('opacity', f(ramp(t, .09, .18) * fFut));
+    Q.past.setAttribute('stroke-width', f(6 + (inP1 ? 3 * focus(kk, 3) : 0)));
+    Q.future.setAttribute('stroke-width', f(5 + (inP1 ? 3 * Math.max(focus(kk, 5), fDir) : 0)));
     Q.heads.setAttribute('opacity', f(ramp(t, -.6, -.35) * (.7 + .3 * fDir)));
 
-    // Capoeira: generations on the ring, a legacy passed along it
-    const dotsIn = t >= 3 ? 1 : inP2 ? ramp(b2, 0, .7) : 0;
-    const flowPast = t >= 3 ? 1 : inP2 ? ramp(b2, .95, 1.35) : 0;
-    const change = t >= 3 ? 0 : inP2 ? bump(b2, 1.9, 2.2, 2.85, 3.2) : 0;
-    const flowFut = t >= 3 ? 1 : inP2 ? ramp(b2, 2.95, 3.3) : 0;
-    const fillProg = t >= 3 ? 1 : inP2 ? clamp((b2 - 3) / .9) : 0;
+    // Second paragraph (t = 2 + chunk × .2): the generations appear as the box
+    // rises ("The same is true of Capoeira."); "We receive a legacy…" — the legacy
+    // flows down from the ancestors into the present; "transform that knowledge…"
+    // — the sun transforms it; "carry the responsibility…" — it flows on and the
+    // future generations fill.
+    const dotsIn = ramp(t, 1.8, 2);
+    const flowPast = ramp(t, 2.1, 2.2);
+    const change = bump(t, 2.3, 2.4, 2.5, 2.6);
+    const flowFut = ramp(t, 2.5, 2.6);
+    const fillProg = ramp(t, 2.5, 2.6);
     Q.dots.forEach((d, i) => {
       const a = GEN[i], past = a < 270;
       const appear = ramp(dotsIn, i / 16, i / 16 + .3);
@@ -530,11 +558,35 @@
       const [x, y] = P(QR, a);
       set(p.n, { cx: f(x), cy: f(y), opacity: f(vis * .95), fill: inPast ? C.brush : C.sun, r: f(3.6 + 1.2 * near) });
     });
-    const grow = 1 + .32 * change + .14 * (inP1 ? focus(b1, 3) : 0);
+    const grow = 1 + .32 * change + .14 * (inP1 ? focus(kk, 4) : 0);
     Q.core.setAttribute('r', f(12.5 * grow));
     Q.halo.setAttribute('r', f(46 * grow));
     Q.rays.setAttribute('transform', `rotate(${f(RM ? 0 : sec * (30 + 160 * change))}) scale(${f(grow)})`);
     Q.core.setAttribute('fill', mix(C.sun, C.musoni, change * .6));
+
+    // Where the sun stands on the ring. First paragraph: at PRESENT for the
+    // opening chunks and "to know where we are going"; back to the middle of
+    // PAST for "recognize where we came from"; PRESENT again for "understand
+    // where we are today"; the middle of FUTURE for "prepare what we will leave
+    // for those who come after us". Second paragraph: it loops the ring —
+    // continuity — carrying on from where it stood. It glides, never jumps.
+    const P1A = [270, 270, 270, 180, 270, 360];
+    let target;
+    if (t < 1.85) {
+      const x = clamp(kk, 0, 5), i = Math.min(4, Math.floor(x));
+      target = t < .97 ? 270 : lerp(P1A[i], P1A[i + 1], smooth(x - i));
+      Q.loopStart = null;
+    } else {
+      if (Q.loopStart == null) Q.loopStart = sec;
+      target = 360 + (RM ? 0 : (sec - Q.loopStart) * 32);
+    }
+    const dt = Q.lastSec ? Math.min(100, (sec - Q.lastSec) * 1000) : 16;
+    Q.lastSec = sec;
+    if (Q.sunA == null || RM) Q.sunA = target;
+    const dA = ((target - Q.sunA) % 360 + 540) % 360 - 180;           // the short way round
+    Q.sunA += dA * (1 - Math.exp(-dt / 140));
+    const [sx, sy] = P(QR, Q.sunA);
+    Q.sun.setAttribute('transform', `translate(${f(sx)} ${f(sy)})`);
   }
 
   /* ═════════════════ BACK PAGE ═════════════════ */
@@ -665,50 +717,58 @@
   }
 
   /* ═════════════════ scenes, scroll loop, language ═════════════════ */
-  // A scene is a sticky diagram with boxes of text scrolling over it. Every box
-  // lives through the same three phases:
-  //   1. it rises into place — heading visible, the diagram holds still;
-  //   2. it pins, and its words unfold while its animation plays — both driven
-  //      by the same stretch of scroll, so the words on screen always describe
-  //      what the diagram is doing;
-  //   3. it hangs a moment, complete, with "keep scrolling" glowing — then
-  //      leaves as the next box rises.
-  // Each plan entry says where on the diagram's timeline a box's animation
-  // runs: `arrive` while it rises, `from → to` while it unfolds. A step with
-  // `span` has no box and plays its stretch across its own scroll.
-  const HANG = .2;          // hang after the last word, in viewport heights
+  // A scene is a sticky diagram with boxes of text scrolling over it.
+  //   1. A box rises into place (heading only) while the diagram moves to the
+  //      moment that box describes — the sun travels BETWEEN boxes, so when a
+  //      box is ready the picture already shows what its first words say.
+  //   2. Pinned, its text appears one chunk at a time. Chunks are authored in
+  //      the markup (data-k): whole sentences or clauses, never a lone word
+  //      (semantic line breaks, sembr.org). A chunk that adds something to the
+  //      picture brings it in as it appears; scrolling back takes both away.
+  //   3. After the last chunk the box hangs a moment, "keep scrolling" glowing,
+  //      then recedes behind the diagram as the next box rises.
+  // A plan entry gives the diagram's timeline position for a box: `arrive`
+  // (reached as it pins, optionally through `via` waypoints) and one value per
+  // chunk. A `span` step has no box and plays its stretch across its scroll.
+  const HANG = .2;          // hang after the last chunk, in viewport heights
   const STORY_PLAN = { start: 0, steps: [
     { cover: true },
-    { arrive: 0, from: 0, to: 1.3 },        // The Kongo Cosmogram — the emblem folds into the cosmogram, the sun circles
-    { arrive: 3, from: 7.5, to: 8.4 },      // Its four stages… — NSEKE/MPEMBA as it rises; disc, sky and names as it unfolds
-    { arrive: 8.4, from: 8.4, to: 9 },      // KALA — the sun rises
-    { arrive: 9, from: 9, to: 10 },         // TUKULA — the sun climbs to noon
-    { arrive: 10, from: 10, to: 11 },       // LUVEMBA — the sun sets
-    { arrive: 11, from: 11, to: 12 },       // MUSONI — midnight, in the world of the ancestors
-    { span: [12, 13] },                     // the cycle closes back at Kala
+    // The Kongo Cosmogram — the emblem folds into the cosmogram as the box rises;
+    // "It represents existence as a continuous cycle" sets the sun circling;
+    // "of birth, growth, …" lights each word as the sun passes its moment.
+    { arrive: .92, chunks: [.92, .92, 1.1, 1.25] },
+    // Its four stages… — as it rises: NSEKE/MPEMBA, then the disc, sky and path;
+    // its one sentence lights the four moments in order, Kala to Musoni.
+    { via: [[.45, 3], [.46, 7.5]], arrive: 8.4, chunks: [8.8] },
+    { arrive: 9, chunks: [9, 9] },          // KALA — the sun rises while the box does
+    { arrive: 10, chunks: [10, 10] },       // TUKULA — noon
+    { arrive: 11, chunks: [11, 11, 11] },   // LUVEMBA — sunset
+    // MUSONI — midnight; "and preparation for a new cycle." carries the sun on round to
+    // Kala, orange painting in behind it, across that chunk's scroll
+    { arrive: 12, chunks: [12, 12, { to: 13, scrub: true }] },
+    { span: [13, 14] },                     // the diagram and its sky dissolve into the page for the next section
   ] };
   const PPF_PLAN = { start: -1, steps: [
-    { arrive: -.35, from: -.35, to: .2 },   // title — the ring draws as it rises; one label per subtitle word
-    { arrive: 1, from: 1, to: 1.99 },       // first paragraph (its phrases drive the ring, see renderPPF)
-    { arrive: 2, from: 2, to: 2.99 },       // second paragraph
-    { span: [3, 3] },                       // closing mark
+    { arrive: -.35, chunks: [-.24, -.03, .18] },                  // ring drawn; a label per word
+    { arrive: 1, chunks: [1, 1.15, 1.3, 1.45, 1.6, 1.75] },       // see renderPPF for each beat
+    { arrive: 2, chunks: [2, 2.2, 2.4, 2.6] },
+    { span: [2.6, 2.6] },
   ] };
   const BREAKDOWN_PLAN = { start: 1.4, steps: [
-    { arrive: 1.45, from: 1.45, to: 2 },    // Circle represents Water
-    { arrive: 2.45, from: 2.45, to: 3 },    // Above / Below the Line
-    { arrive: 3.45, from: 3.45, to: 4 },    // Passage through Water
-    { arrive: 4.45, from: 4.45, to: 5 },    // Small Circles
-    { arrive: 5.45, from: 5.45, to: 6 },    // the Poles
-    { arrive: 6.45, from: 6.45, to: 7 },    // Arrows
+    { arrive: 2, chunks: [2] },              // Circle represents Water
+    { arrive: 2.7, chunks: [2.7, 3] },       // Above the Line… · Below the Line…
+    { arrive: 4, chunks: [4] },              // Passage through Water
+    { arrive: 5, chunks: [5, 5] },           // Small Circles… · Representing Phases…
+    { arrive: 5.7, chunks: [5.7, 6] },       // Pole of Physical Power… · Pole of Spiritual Power…
+    { arrive: 6.83, chunks: [6.83, 7] },     // Arrows show direction… · Follows Path of Sun…
     { span: [7, 7.5] },
   ] };
 
   function makeScene(section, plan, mode, render) {
     const steps = $$('.step', section);
-    const sc = { section, steps, plan, mode, render, visible: false, keys: [[0, plan.start]], read: 0 };
+    const sc = { section, steps, plan, mode, render, visible: false, keys: [[0, plan.start]], read: 0, T: null };
     sc.boxes = steps.map(step => { const card = $(':scope > .card', step); return card ? makeBox(card, step) : null; });
     sc.cards = sc.boxes.filter(Boolean).map(b => b.el);
-    sc.beat = i => (sc.boxes[i] && sc.boxes[i].B != null ? sc.boxes[i].B : -1);
     scenes.push(sc);
     return sc;
   }
@@ -716,16 +776,21 @@
   const FOOT = '<span class="pin-bar"><i></i></span><span class="pin-cue"><span data-l="en">Keep scrolling</span>' +
     '<span data-l="pt">Continue rolando</span><svg viewBox="0 0 20 20"><path d="M5 5l5 5 5-5M5 11l5 5 5-5"/></svg></span>';
   function makeBox(card, step) {
-    const box = { el: card, step, beats: +step.dataset.beats || 0, words: [], phrases: [], U: 1, s: 0, pinStart: 0, pinEnd: 0 };
-    if (box.beats) {
-      for (const p of $$('.unfold', card)) { const r = prepareUnfold(p); box.words.push(...r.words); box.phrases.push(...r.phrases); }
-    } else {
-      for (const p of $$('p', card)) wrapReveal(p, box.words);
-      // each language's words unfold evenly across the box's unfold stretch
-      const byLang = {};
-      for (const w of box.words) { const l = w.el.closest('[data-l]'); (byLang[l ? l.dataset.l : 'all'] = byLang[l ? l.dataset.l : 'all'] || []).push(w); }
-      for (const k in byLang) byLang[k].forEach((w, j, all) => { w.th = (j + 1) / all.length * .97; });
-      box.byLang = byLang;
+    const box = { el: card, step, words: [], phrases: [], vis: { en: [], pt: [] }, n: 0, s: 0,
+      pinStart: 0, pinEnd: 0, cs: [], shown: -1, caretIdx: -1 };
+    // every chunk's words, in reading order; each word knows its chunk and its place in it
+    for (const chunk of $$('[data-k]', card)) {
+      const k = +chunk.dataset.k, list = [];
+      wrapReveal(chunk, list);
+      list.forEach((w, j) => { w.k = k; w.el.style.setProperty('--j', Math.min(j, 14)); });
+      box.words.push(...list);
+      for (const c of $$('.c', chunk)) box.phrases.push({ el: c, k });
+      box.n = Math.max(box.n, k + 1);
+    }
+    for (const w of box.words) {
+      const l = w.el.closest('[data-l]'), lang = l ? l.dataset.l : null;
+      if (lang !== 'pt') box.vis.en.push(w);
+      if (lang !== 'en') box.vis.pt.push(w);
     }
     const foot = document.createElement('div');
     foot.className = 'pin-foot'; foot.setAttribute('aria-hidden', 'true'); foot.innerHTML = FOOT;
@@ -735,13 +800,6 @@
     box.caret = document.createElement('span');
     box.caret.className = 'caret'; box.caret.setAttribute('aria-hidden', 'true');
     card.appendChild(box.caret);
-    box.vis = { en: [], pt: [] };                       // the words of each language, in reading order
-    for (const w of box.words) {
-      const l = w.el.closest('[data-l]'), k = l ? l.dataset.l : null;
-      if (k !== 'pt') box.vis.en.push(w);
-      if (k !== 'en') box.vis.pt.push(w);
-    }
-    box.caretIdx = -1;
     return box;
   }
   function wrapReveal(node, list) {
@@ -753,7 +811,7 @@
           if (!part) return;
           if (/^\s+$/.test(part)) { frag.append(part); return; }
           const s = document.createElement('span'); s.className = 'rw'; s.textContent = part; frag.append(s);
-          list.push({ el: s, on: false, th: 1 });
+          list.push({ el: s, on: false, k: 0 });
         });
         child.replaceWith(frag);
       } else if (child.nodeType === 1) wrapReveal(child, list);
@@ -764,27 +822,57 @@
     const { vh } = state;
     const read = sc.read = Math.round(layout(sc.mode).read);
     sc.section.style.setProperty('--read', read + 'px');
-    // 1. size each box's step: room to rise, the box itself, unfold room, hang
-    for (const b of sc.boxes) {
-      if (!b) continue;
+    // 1. size each box's step: room to rise, the box, one window per chunk, the hang
+    sc.boxes.forEach((b, i) => {
+      if (!b) return;
+      const counts = new Array(b.n).fill(0);
+      for (const w of b.vis[state.lang]) counts[w.k]++;
+      const chunks = (sc.plan.steps[i] && sc.plan.steps[i].chunks) || [];
+      // longer chunks get longer to read; a chunk that drives a motion gets room for it
+      b.win = counts.map((c, k) => Math.max(clamp(c * 14, .15 * vh, .32 * vh), chunks[k] && chunks[k].scrub ? .55 * vh : 0));
+      b.lead = .06 * vh;                                              // a beat of empty box, caret blinking
       const h = b.el.offsetHeight;
-      const n = b.beats ? 0 : (b.byLang[state.lang] || b.byLang.all || []).length;
-      b.U = Math.max(1, b.beats ? (b.beats - 1) * .3 * vh : clamp(n * 13, .25 * vh, .6 * vh));
-      b.s = Math.max(50, Math.min(read, vh - h - 12));     // pinned position — higher for a tall box so it fits
+      b.s = Math.max(50, Math.min(read, vh - h - 12));                // pinned position — higher for a tall box
       b.el.style.top = b.s + 'px';
-      b.step.style.height = Math.round(read + h + b.U + HANG * vh) + 'px';
-    }
-    // 2. where each box pins and lets go
+      const pinned = b.lead + b.win.reduce((a, x) => a + x, 0) + HANG * vh;
+      b.step.style.height = Math.round(read + h + pinned) + 'px';
+      b.pinned = pinned;
+    });
+    // 2. where each box pins, where each chunk appears, where it lets go
     const tops = sc.steps.map(docTop);
-    sc.boxes.forEach((b, i) => { if (b) { b.pinStart = tops[i] + read - b.s; b.pinEnd = b.pinStart + b.U + HANG * vh; } });
+    sc.boxes.forEach((b, i) => {
+      if (!b) return;
+      b.pinStart = tops[i] + read - b.s;
+      b.cs = []; let y = b.pinStart + b.lead;
+      b.win.forEach(w => { b.cs.push(y); y += w; });
+      b.pinEnd = b.pinStart + b.pinned;
+    });
     // 3. scroll position → the diagram's timeline
     const keys = [[docTop(sc.section) - vh, sc.plan.start]];
-    const last = () => keys[keys.length - 1][1];
+    const last = () => keys[keys.length - 1];
     sc.plan.steps.forEach((p, i) => {
       const b = sc.boxes[i], top = tops[i];
-      if (p.span) keys.push([top, p.span[0]], [top + Math.max(1, sc.steps[i].offsetHeight - vh), p.span[1]]);
-      else if (!b) keys.push([top, last()]);
-      else keys.push([b.pinStart, p.arrive], [b.pinStart + .5, p.from], [b.pinStart + b.U, p.to], [b.pinEnd, p.to]);
+      if (p.span) {
+        // a box-less step plays its stretch over all the scroll left while the
+        // diagram is still pinned: from the previous box letting go to the end
+        // of the section's stuck range
+        const y0 = last()[0], y1 = Math.max(y0 + 2, top + sc.steps[i].offsetHeight - vh);
+        keys.push([y0 + 1, p.span[0]], [y1, p.span[1]]);
+        return;
+      }
+      if (!b) { keys.push([top, last()[1]]); return; }
+      const y0 = last()[0];
+      for (const [fr, T] of p.via || []) keys.push([y0 + (b.pinStart - y0) * fr, T]);
+      keys.push([b.pinStart, p.arrive]);
+      let prevT = p.arrive;
+      p.chunks.forEach((c, k) => {
+        if (k >= b.cs.length) return;
+        const T = typeof c === 'object' ? c.to : c;
+        if (typeof c === 'object' && c.scrub) keys.push([b.cs[k], prevT], [b.cs[k] + b.win[k], T]);   // moves while you read it
+        else keys.push([b.cs[k] - 1, prevT], [b.cs[k], T]);                                              // arrives with the chunk
+        prevT = T;
+      });
+      keys.push([Math.max(b.pinEnd, last()[0] + 1), prevT]);
     });
     sc.keys = keys;
   }
@@ -797,66 +885,24 @@
     return keys[keys.length - 1][1];
   }
 
-  // Unfold each box's words for the current scroll position, fill its bar,
-  // and mark it complete (the cue glows) once the last word is out.
+  // Show each box's chunks up to the scroll position, highlight the newest
+  // chunk's key phrase, fill its bar, and mark it complete once all are out.
   function updateBoxes(sc) {
-    const y = scrollY, vh = state.vh;
+    const y = scrollY;
     for (const b of sc.boxes) {
       if (!b) continue;
-      let prog;
-      if (b.beats) {
-        // phrase-by-phrase: beat 0 while the box rises, the rest while pinned
-        const rise = vh * .45;
-        const B = b.B = y < b.pinStart - rise ? -1 : y < b.pinStart ? (y - (b.pinStart - rise)) / rise
-          : 1 + clamp((y - b.pinStart) / b.U) * (b.beats - 1) * .999;
-        const cur = B < 0 ? -1 : Math.floor(B);
-        for (const w of b.words) { const on = B >= w.th; if (w.on !== on) { w.on = on; w.el.classList.toggle('on', on); } }
-        for (const ph of b.phrases) {
-          let shown = 0;
-          for (const w of ph.words) if (w.on) shown += w.len + 1;
-          ph.el.style.backgroundSize = f(Math.min(100, shown / ph.total * 100)) + '% 100%';
-          ph.el.classList.toggle('cur', ph.b === cur);
-        }
-        prog = B < 0 ? 0 : clamp(B / (b.beats - .02));
-      } else {
-        const u = clamp((y - b.pinStart) / b.U);
-        for (const w of b.words) { const on = u >= w.th; if (w.on !== on) { w.on = on; w.el.classList.toggle('on', on); } }
-        prog = u;
+      let shown = 0;
+      while (shown < b.cs.length && y >= b.cs[shown]) shown++;
+      if (shown !== b.shown) {
+        b.shown = shown;
+        for (const w of b.words) { const on = w.k < shown; if (w.on !== on) { w.on = on; w.el.classList.toggle('on', on); } }
+        for (const ph of b.phrases) ph.el.classList.toggle('cur', ph.k === shown - 1);
+        b.el.classList.toggle('complete', shown >= b.n);
       }
-      b.bar.style.transform = `scaleX(${f(prog)})`;
-      b.el.classList.toggle('complete', y >= b.pinStart + b.U - 1);
+      const end = b.cs.length ? b.cs[b.cs.length - 1] : b.pinStart + 1;
+      b.bar.style.transform = `scaleX(${f(clamp((y - b.pinStart) / Math.max(1, end - b.pinStart)))})`;
       placeCaret(b);
     }
-  }
-
-  // Pinned paragraphs of Past · Present · Future unfold phrase by phrase. Every
-  // word belongs to the beat of its phrase (data-b in the markup); only the
-  // current beat's phrase is highlighted; scrolling back hides words again.
-  function prepareUnfold(p) {
-    const words = [], phrases = [];
-    for (const seg of $$('[data-b]', p)) {
-      const b = +seg.dataset.b;
-      const phrase = seg.classList.contains('c') ? { el: seg, b, words: [], total: 0 } : null;
-      for (const node of [...seg.childNodes]) {
-        if (node.nodeType !== 3) continue;
-        const frag = document.createDocumentFragment();
-        node.textContent.split(/(\s+)/).forEach(part => {
-          if (!part) return;
-          if (phrase) phrase.total += part.length;
-          if (/^\s+$/.test(part)) { frag.append(part); return; }
-          const s = document.createElement('span'); s.className = 'rw'; s.textContent = part; frag.append(s);
-          const w = { el: s, b, len: part.length, on: false };
-          words.push(w); if (phrase) phrase.words.push(w);
-        });
-        node.replaceWith(frag);
-      }
-      if (phrase) phrases.push(phrase);
-    }
-    // a word's threshold: its beat, plus its place among that beat's words
-    const byBeat = {};
-    for (const w of words) (byBeat[w.b] = byBeat[w.b] || []).push(w);
-    for (const b in byBeat) byBeat[b].forEach((w, j, all) => { w.th = +b + (j + 1) / all.length * .72; });
-    return { words, phrases };
   }
 
   // Whole-site progress: one segment per box / section, the current one filling.
@@ -901,7 +947,7 @@
   function placeCaret(b) {
     const vis = b.vis[state.lang] || [];
     let idx = 0;
-    while (idx < vis.length && vis[idx].on) idx++;       // words appear in reading order
+    while (idx < vis.length && vis[idx].on) idx++;       // chunks appear in reading order
     if (idx === b.caretIdx) return;
     const moved = b.caretIdx >= 0;
     b.caretIdx = idx;
@@ -967,7 +1013,7 @@
     set(dialSun, { cx: f(x), cy: f(y) });
   }
 
-  let raf = 0, backVisible = false;
+  let raf = 0, backVisible = false, lastNow = 0;
   function frame(now) {
     raf = 0;
     // On screen right now? Read from layout every frame rather than trusting the
@@ -978,7 +1024,18 @@
       const r = s.section.getBoundingClientRect();
       s.visible = r.height > 0 && r.bottom > -vh * .1 && r.top < vh * 1.1;
     }
-    for (const s of scenes) if (s.visible) { updateBoxes(s); s.render(timeline(s.keys, scrollY), now, s); }
+    // The diagram glides to where the scroll says it should be (about half a
+    // second), so a chunk and the picture change it brings arrive together.
+    const dt = lastNow ? Math.min(100, now - lastNow) : 16;
+    lastNow = now;
+    for (const s of scenes) {
+      if (!s.visible) continue;
+      updateBoxes(s);
+      const target = timeline(s.keys, scrollY);
+      s.T = (s.T == null || RM || Math.abs(target - s.T) > 3) ? target : s.T + (target - s.T) * (1 - Math.exp(-dt / 150));
+      if (Math.abs(target - s.T) < 1e-4) s.T = target;
+      s.render(s.T, now, s);
+    }
     if (backVisible) renderBack(now);
     fadeCards();
     typed();
@@ -1083,7 +1140,7 @@
 
   setLang(lang);
   // read-only handle for the headless checks: scroll → timeline and each box's pin window
-  window.__pdc = { scenes, timeline };
+  window.__pdc = { scenes, timeline, plans: { journey: STORY_PLAN, ppf: PPF_PLAN, anatomy: BREAKDOWN_PLAN } };
   // start the cover animation once the fonts are in, so the lettering draws in its real shape
   const go = () => { if (!state.start) { state.start = performance.now(); kick(); } };
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(go);

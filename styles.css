@@ -184,19 +184,22 @@ h2.brush {
 /* highlight only — no weight change, which would re-wrap the lines and nudge the box */
 .w.on { background-size: 100% 100%; }
 .w:has(> .rw:not(.on)) { background-size: 0% 100%; }   /* not yet unfolded: no mark */
-/* Pinned paragraphs unfold word by word with the scroll. The words still to
-   come keep their space (invisible), so the card never jumps; only the phrase
-   the diagram is showing right now is highlighted, growing as its words appear
-   (one strip across line breaks). */
+/* Boxes unfold one chunk at a time (a sentence or clause, data-k in the
+   markup). A chunk's words ripple in quickly, left to right (--j = the word's
+   place in its chunk); the words still to come keep their space, invisible, so
+   the box never jumps. In Past · Present · Future the newest chunk's key phrase
+   is highlighted; it sweeps in with the words and fades when the next arrives. */
 @property --hl { syntax: '<color>'; inherits: false; initial-value: rgba(255,183,0,0); }
 .c {
   --hl: rgba(255,183,0,0);
-  transition: --hl .35s ease;
+  background-size: 0% 100%;
+  transition: --hl .45s ease, background-size .55s cubic-bezier(.3,.7,.2,1);
   -webkit-box-decoration-break: slice; box-decoration-break: slice;
 }
-.c.cur { --hl: rgba(255,183,0,.62); }
-.rw { opacity: 0; transition: opacity .22s ease; }
+.c.cur { --hl: rgba(255,183,0,.62); background-size: 100% 100%; transition-delay: .12s; }
+.rw { opacity: 0; transition: opacity .28s ease; transition-delay: calc(var(--j, 0) * 32ms); }
 .rw.on { opacity: 1; }
+.rw:not(.on) { transition-delay: 0s; }       /* scrolling back: gone at once */
 
 /* progress + "keep scrolling" under a pinned paragraph */
 .pin-foot { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
@@ -287,7 +290,8 @@ h2.brush {
 /* ───────── back page ───────── */
 .back {
   position: relative;
-  background: var(--paper);
+  /* fades in from the page colour Past · Present · Future ends on — no hard seam */
+  background: linear-gradient(180deg, var(--page) 0, var(--paper) 60vh) no-repeat, var(--paper);
   padding: 72px 16px 56px;
   overflow-x: clip;   /* not hidden: the step-by-step inside needs sticky positioning */
 }
@@ -330,7 +334,7 @@ html[data-lang="pt"] .back-title .l2 { font-size: clamp(14px, 4.55vw, 52px); }
   grid-column: 1 / -1; align-self: stretch;
   width: 100vw; margin-left: calc(50% - 50vw);
 }
-.step-close { min-height: 40vh; min-height: 40svh; padding: 0; }
+.step-close { min-height: 70vh; min-height: 70svh; padding: 0; }
 .fig > svg { width: 100%; height: auto; display: block; overflow: visible; }
 .fig-pendant { position: relative; transform-origin: 50% 4%; animation: swing 5.5s ease-in-out infinite alternate; }
 .fig-pendant img { filter: drop-shadow(0 10px 14px rgba(40,14,6,.35)); }
