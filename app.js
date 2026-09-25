@@ -731,6 +731,17 @@
     foot.className = 'pin-foot'; foot.setAttribute('aria-hidden', 'true'); foot.innerHTML = FOOT;
     card.appendChild(foot);
     box.bar = $('.pin-bar i', foot);
+    // a typing caret marks where the next words will appear
+    box.caret = document.createElement('span');
+    box.caret.className = 'caret'; box.caret.setAttribute('aria-hidden', 'true');
+    card.appendChild(box.caret);
+    box.vis = { en: [], pt: [] };                       // the words of each language, in reading order
+    for (const w of box.words) {
+      const l = w.el.closest('[data-l]'), k = l ? l.dataset.l : null;
+      if (k !== 'pt') box.vis.en.push(w);
+      if (k !== 'en') box.vis.pt.push(w);
+    }
+    box.caretIdx = -1;
     return box;
   }
   function wrapReveal(node, list) {
@@ -814,6 +825,7 @@
       }
       b.bar.style.transform = `scaleX(${f(prog)})`;
       b.el.classList.toggle('complete', y >= b.pinStart + b.U - 1);
+      placeCaret(b);
     }
   }
 
@@ -874,8 +886,38 @@
   let typedParas = [];
   function measure() {
     state.vw = innerWidth; state.vh = innerHeight;
-    for (const s of scenes) measureScene(s);
+    for (const s of scenes) { measureScene(s); for (const b of s.boxes) if (b) b.caretIdx = -1; }
     measureProgress();
+  }
+
+  // The caret sits before the first letter while a box is empty, then right
+  // after the last word that has appeared; it leaves once the box is complete
+  // and comes back if you scroll up. Solid while words arrive, blinking at rest.
+  function offsetIn(node, root) {
+    let x = 0, y = 0;
+    for (let n = node; n && n !== root; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; }
+    return [x, y];
+  }
+  function placeCaret(b) {
+    const vis = b.vis[state.lang] || [];
+    let idx = 0;
+    while (idx < vis.length && vis[idx].on) idx++;       // words appear in reading order
+    if (idx === b.caretIdx) return;
+    const moved = b.caretIdx >= 0;
+    b.caretIdx = idx;
+    const c = b.caret;
+    if (!vis.length || idx >= vis.length) { c.classList.remove('show', 'typing'); return; }
+    const w = vis[Math.max(0, idx - 1)].el;
+    const [x, y] = offsetIn(w, b.el);
+    c.style.left = (idx === 0 ? x - 1 : x + w.offsetWidth + 2) + 'px';
+    c.style.top = y + 'px';
+    c.style.height = w.offsetHeight + 'px';
+    c.classList.add('show');
+    if (moved) {
+      c.classList.add('typing');
+      clearTimeout(b.caretT);
+      b.caretT = setTimeout(() => c.classList.remove('typing'), 480);
+    }
   }
 
   // A box fades in as it rises from the bottom. Once read, as it moves up past

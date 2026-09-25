@@ -136,6 +136,15 @@ html[data-lang="pt"] [data-l="en"] { display: none !important; }
   box-shadow: 0 10px 30px rgba(27,20,18,.16), 0 1px 0 rgba(255,255,255,.6) inset;
 }
 .card > * { position: relative; }
+/* typing caret: where the next words will appear (placed by app.js) */
+.card > .caret {
+  position: absolute; left: 0; top: 0; width: 2px; height: 1.2em;
+  border-radius: 1px; background: currentColor;
+  opacity: 0; pointer-events: none;
+}
+.card > .caret.show { opacity: 1; animation: caret-blink 1.06s steps(1, end) infinite; }
+.card > .caret.show.typing { animation: none; }            /* solid while words are arriving */
+@keyframes caret-blink { 50% { opacity: 0; } }
 .card.page p { margin: 0 0 .6em; }
 .card.page p:last-child { margin-bottom: 0; }
 .card.note {
