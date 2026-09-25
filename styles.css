@@ -143,7 +143,6 @@ html[data-lang="pt"] [data-l="en"] { display: none !important; }
   opacity: 0; pointer-events: none;
 }
 .card > .caret.show { opacity: 1; animation: caret-blink 1.06s steps(1, end) infinite; }
-.card > .caret.show.typing { animation: none; }            /* solid while words are arriving */
 @keyframes caret-blink { 50% { opacity: 0; } }
 .card.page p { margin: 0 0 .6em; }
 .card.page p:last-child { margin-bottom: 0; }

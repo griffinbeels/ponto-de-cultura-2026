@@ -435,11 +435,12 @@
       c.dot.setAttribute('opacity', f(small * beat));
       c.glow.setAttribute('opacity', f(Math.max(near * moments, pole, lit)));
       if (story) {
-        // a label pops up as the sun passes its dot, gone by halfway to the next;
+        // a label pops up as the sun passes its dot and stays until the sun is
+        // 95% of the way to the next one, fading out over that last 5%;
         // it stays for good once the sun has landed on that stage (Kala at the
         // KALA box … Musoni at the MUSONI box), so the last step shows all four
         const d = ((sunAt - c.a) % 360 + 360) % 360;
-        const brief = sunO * ramp(t, .6, .9) * ramp(d, 0, 6) * (1 - ramp(d, 30, 45));
+        const brief = sunO * ramp(t, .6, .9) * ramp(d, 0, 6) * (1 - ramp(d, 85.5, 90));
         const kept = ramp(t, 8.95 + i, 9 + i) * (.55 + .45 * Math.max(near, ramp(t, 12.6, 13)));   // all four full as the cycle closes
         J.nameEls[i].setAttribute('opacity', f(Math.max(brief, kept)));
       }
@@ -964,29 +965,30 @@
   }
   // A word has finished appearing once its ripple delay and its fade are over
   // (the .rw transition in styles.css: 32ms per place in its chunk, then .28s).
-  // The caret only moves past words that have, so it types along behind the
-  // text and never waits ahead of it.
+  // While a chunk is fading in the caret is hidden; once every word of it has
+  // landed, the caret appears — blinking — right after it. It never travels
+  // across the text, and after the last chunk it does not come back.
   const WORD_STEP = 32, WORD_FADE = 280;
   function placeCaret(b) {
-    const vis = b.vis[state.lang] || [], now = performance.now();
+    const vis = b.vis[state.lang] || [], now = performance.now(), c = b.caret;
     let idx = 0;
-    while (idx < vis.length && vis[idx].on && (RM || now >= vis[idx].onAt + vis[idx].j * WORD_STEP + WORD_FADE)) idx++;
+    while (idx < vis.length && vis[idx].on) idx++;          // chunks appear in reading order
+    let settled = true;
+    for (let i = 0; i < idx && settled; i++) settled = RM || now >= vis[i].onAt + vis[i].j * WORD_STEP + WORD_FADE;
+    if (!vis.length || idx >= vis.length || !settled) {      // box complete, or a chunk still arriving
+      c.classList.remove('show');
+      b.caretIdx = idx >= vis.length ? idx : -2;
+      return;
+    }
     if (idx === b.caretIdx) return;
-    const moved = b.caretIdx >= 0;
     b.caretIdx = idx;
-    const c = b.caret;
-    if (!vis.length || idx >= vis.length) { c.classList.remove('show', 'typing'); return; }
     const w = vis[Math.max(0, idx - 1)].el;
     const [x, y] = offsetIn(w, b.el);
     c.style.left = (idx === 0 ? x - 1 : x + w.offsetWidth + 2) + 'px';
     c.style.top = y + 'px';
     c.style.height = w.offsetHeight + 'px';
+    c.classList.remove('show'); void c.offsetWidth;            // restart the blink, visible first
     c.classList.add('show');
-    if (moved) {
-      c.classList.add('typing');
-      clearTimeout(b.caretT);
-      b.caretT = setTimeout(() => c.classList.remove('typing'), 480);
-    }
   }
 
   // A box fades in as it rises from the bottom. Once read, as it moves up past
