@@ -63,6 +63,10 @@
     const g = el('radialGradient', { id }, defs);
     [['0', .95], ['.32', .42], ['1', 0]].forEach(([o, a]) => el('stop', { offset: o, 'stop-color': color, 'stop-opacity': a }, g));
   }
+  function fogGradient(defs, id, color) {
+    const g = el('radialGradient', { id }, defs);
+    [['0', 1], ['.78', 1], ['1', 0]].forEach(([o, a]) => el('stop', { offset: o, 'stop-color': color, 'stop-opacity': a }, g));
+  }
   function hex(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
   function mix(a, b, t) { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], t))).join(',')})`; }
 
@@ -122,6 +126,10 @@
     el('path', { id: id + 'ArcTop', d: 'M-114 0A114 114 0 0 1 114 0' }, defs);
     el('path', { id: id + 'ArcBot', d: 'M-128 0A128 128 0 0 0 128 0' }, defs);
 
+    // "fog": a soft disc in the page's own colour behind the drawing — invisible
+    // on its own, but a box sliding behind the diagram disappears into it
+    fogGradient(defs, id + 'Fog', C.paper);
+    J.fog = el('circle', { r: 212, fill: `url(#${id}Fog)` }, svg);
     J.disk = el('circle', { r: 207, fill: '#F0D8C6', opacity: 0 }, svg);
     J.wedges = MOMENTS.map(m => el('path', { fill: m.fill, d: '' }, svg));
 
@@ -387,6 +395,7 @@
     J.core.setAttribute('opacity', f(full));
     J.orbit.setAttribute('opacity', f(ramp(t, 7.75, 8.35)));
     J.disk.setAttribute('opacity', f(ramp(t, 7.6, 8.3)));
+    J.fog.setAttribute('opacity', f(1 - ramp(t, 7.6, 8.3)));   // the cream disc takes over once the sky darkens
     J.names.setAttribute('opacity', f(ramp(t, 8.0, 8.6)));
 
     const moments = ramp(t, 8.6, 9);
@@ -431,6 +440,8 @@
     const svg = $('#ppf-svg');
     const defs = el('defs', null, svg);
     glowGradient(defs, 'qSun', C.sun);
+    fogGradient(defs, 'qFog', C.page);
+    el('circle', { r: 206, fill: 'url(#qFog)' }, svg);   // boxes recede into this
     Q.base = el('circle', { r: QR, fill: 'none', stroke: C.ink, 'stroke-width': 1.2, 'stroke-dasharray': '2 7', opacity: 0 }, svg);
     Q.past = el('path', { d: arcD(QR, 90, 270), fill: 'none', stroke: C.brush, 'stroke-width': 6, 'stroke-linecap': 'round', pathLength: 1, 'stroke-dasharray': '1 1', 'stroke-dashoffset': 1 }, svg);
     Q.future = el('path', { d: arcD(QR, 270, 449.9), fill: 'none', stroke: C.ink, 'stroke-width': 5, 'stroke-linecap': 'round', 'stroke-dasharray': '.1 13', opacity: 0 }, svg);
@@ -867,21 +878,22 @@
     measureProgress();
   }
 
-  // Cards fade as they rise over the diagram (phones), so the picture stays
-  // visible. A card taller than the space under the diagram stays solid until
-  // its last line has come into view.
+  // A box fades in as it rises from the bottom. Once read, as it moves up past
+  // its pinned spot it drops behind the diagram, shrinks a little and fades —
+  // it recedes rather than sliding over the picture.
   function fadeCards() {
-    const { vh } = state, phone = state.vw < 860;
+    const { vh } = state;
     for (const sc of scenes) {
       if (!sc.visible) continue;
-      for (const c of sc.cards) {
-        const r = c.getBoundingClientRect();
+      for (const b of sc.boxes) {
+        if (!b) continue;
+        const c = b.el, r = c.getBoundingClientRect();
         if (r.bottom < -40 || r.top > vh + 40) continue;
         const fin = clamp((vh - r.top) / (vh * .22));
-        const overflow = Math.max(0, r.height - (vh - sc.read) + 16);
-        const fout = phone ? clamp((r.top + overflow - (sc.read - vh * .28)) / (vh * .28 - 24))
-                           : clamp((r.bottom - vh * .04) / (vh * .2));
-        c.style.opacity = f(smooth(Math.min(fin, fout)));
+        const leave = clamp((b.s - r.top) / (vh * .4));        // 0 while pinned or arriving
+        c.classList.toggle('behind', r.top < b.s - 4);
+        c.style.setProperty('--depth', f(1 - .07 * smooth(leave)));
+        c.style.opacity = f(Math.min(smooth(fin), 1 - smooth(clamp((leave - .12) / .88))));
       }
     }
   }
@@ -916,6 +928,14 @@
   let raf = 0, backVisible = false;
   function frame(now) {
     raf = 0;
+    // On screen right now? Read from layout every frame rather than trusting the
+    // observer alone: its callbacks arrive a frame late, which after a long jump
+    // left a box showing words it should have hidden.
+    const vh = state.vh;
+    for (const s of scenes) {
+      const r = s.section.getBoundingClientRect();
+      s.visible = r.height > 0 && r.bottom > -vh * .1 && r.top < vh * 1.1;
+    }
     for (const s of scenes) if (s.visible) { updateBoxes(s); s.render(timeline(s.keys, scrollY), now, s); }
     if (backVisible) renderBack(now);
     fadeCards();

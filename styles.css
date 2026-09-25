@@ -92,7 +92,13 @@ html[data-lang="pt"] [data-l="en"] { display: none !important; }
   height: 100vh;
   overflow: hidden;
 }
-.steps { position: relative; z-index: 2; margin-top: -100vh; }
+/* Depth: sky at the back, boxes of text in the middle, diagram in front.
+   A box sits above the diagram while it is read, and drops behind it
+   (.behind) as it leaves. .steps sets no z-index, so each box layers itself. */
+.stage-back { z-index: 0; }
+.stage-front { z-index: 2; pointer-events: none; }
+.stage-back + .stage-front { margin-top: -100vh; }
+.steps { position: relative; margin-top: -100vh; }
 .sky { position: absolute; inset: 0; background: var(--paper); }
 .sky::after, .back::before, .card.page::before, .card.note::before, #ppf::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
@@ -112,14 +118,17 @@ html[data-lang="pt"] [data-l="en"] { display: none !important; }
 .step-cover { min-height: 100vh; min-height: 100svh; padding: 0; }
 .step-spacer { min-height: 100vh; min-height: 100svh; padding: 0; }
 /* every box pins while its words unfold; app.js sizes each step for that */
-.step > .card { position: sticky; top: var(--read); }
+.step > .card { position: sticky; top: var(--read); z-index: 3; }
+.step > .card.behind { z-index: 1; }
 .step-end { min-height: 70svh; display: grid; place-items: start center; }
 
 .card {
   position: relative;
   max-width: 560px; margin: 0 auto;
   border-radius: 18px;
-  will-change: opacity;
+  will-change: opacity, transform;
+  transform: scale(var(--depth, 1));   /* shrinks a touch as it recedes behind the diagram */
+  transform-origin: 50% 0;             /* …from its top edge, so its measured top stays put */
 }
 .card.page {
   background: var(--page);
@@ -137,7 +146,7 @@ html[data-lang="pt"] [data-l="en"] { display: none !important; }
   font-size: 19px; line-height: 1.45;
   padding: 16px 18px;
   box-shadow: 0 8px 22px rgba(110,31,18,.18);
-  transform: rotate(-.6deg);
+  transform: rotate(-.6deg) scale(var(--depth, 1));
 }
 .card.note p { margin: 0; position: relative; }
 .card.note p + p { margin-top: .55em; }
